@@ -58,10 +58,15 @@ services:
     image: mxcube
     ports:
      - "8081:8081"
+     - "3000:3000"
     environment:
      - TANGO_HOST=tango-cs:10000
     build:
       context: mxcube
+    volumes:
+      - source: './mxcube/mxcube3'
+        target: '/app/web'
+        type: bind
   b-micromax-md3-pc:
     container_name: b-micromax-md3-pc
     image: b-micromax-md3-pc

@@ -7,6 +7,8 @@ RUN apt-get -y install \
     libgl1-mesa-glx \
     iputils-ping git nano
 
+USER $MAMBA_USER
+
 COPY condarc /opt/conda/.condarc
 
 RUN micromamba install --name base --channel conda-forge \
@@ -24,32 +26,14 @@ RUN micromamba install --name base --channel conda-forge \
     sardana=3.4.0
 
 #
-# clone mxcube repositories
+# copy mxcube repositories
 #
 
-RUN mkdir /app
 WORKDIR /app
 
-# 'Core' repository
-RUN git clone --branch maxiv-micMax https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
-# pin to specified commit
-RUN cd core && git checkout f521c6038b5b1a97f4358c2390df101f7edfd305
-
-# 'Web' aka main repository
-RUN git clone --branch develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
-# pin to specified commit
-RUN cd web && git checkout 35d62cbc989953d22c6752a2d6e1204babc4979b
-
-# 'Configuration' repsitory
-RUN git clone --branch maxiv-micromax https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
-
-# pin to specified commit
-RUN cd conf && git checkout 966edbddb85fed47d182360f2510331683976ff1
-
-# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
-# ISPyB is accessable without proxy on white network.
-COPY no_lims_proxy.patch /tmp
-RUN cd conf && git apply /tmp/no_lims_proxy.patch
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link mxcubecore core
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link mxcube3 web
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link cfg-maxiv-mxcubecore conf
 
 # remove 'mxcubecore' and 'mxcube_video_streamer' packages from dependencies
 RUN sed -i '/^mxcubecore\|^mxcube_video_streamer/d' web/pyproject.toml
@@ -58,11 +42,10 @@ RUN /opt/conda/bin/pip install -e core
 
 # build front-end
 WORKDIR /app/web/ui
-RUN /bin/micromamba run -p /opt/conda npm install
+RUN /bin/micromamba run -p /opt/conda npm clean-install
 RUN /bin/micromamba run -p /opt/conda npm run build
 
 # install our circus 'plug-in'
-RUN mkdir /opt/circus
 COPY tango_ping.py /opt/circus/
 
 COPY circus.conf /etc/

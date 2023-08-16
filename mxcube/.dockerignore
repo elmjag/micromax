@@ -1,0 +1,23 @@
+# Docker
+compose.yaml
+Dockerfile
+.dockerignore
+
+# git
+**/.git
+**/.github
+**/.gitignore
+**/.gitmodules
+
+# Node.js
+**/node_modules
+
+# Python
+**/__pycache__/
+**/*.pyc
+
+# vi
+**/*.swp
+
+
+# EOF
