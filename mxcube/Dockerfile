@@ -31,9 +31,9 @@ RUN micromamba install --name base --channel conda-forge \
 
 WORKDIR /app
 
-COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link mxcubecore core
-COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link mxcube3 web
-COPY --chown="${MAMBA_USER}:${MAMBA_USER}" --link cfg-maxiv-mxcubecore conf
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" mxcubecore core
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" mxcube3 web
+COPY --chown="${MAMBA_USER}:${MAMBA_USER}" cfg-maxiv-mxcubecore conf
 
 # remove 'mxcubecore' and 'mxcube_video_streamer' packages from dependencies
 RUN sed -i '/^mxcubecore\|^mxcube_video_streamer/d' web/pyproject.toml
