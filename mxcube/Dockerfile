@@ -27,24 +27,16 @@ RUN micromamba install --name base --channel conda-forge \
 # clone mxcube repositories
 #
 
-RUN mkdir /app
 WORKDIR /app
 
 # 'Core' repository
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
-# pin to specified commit
-RUN cd core && git checkout 0c25efe58b9934ccf874b22395ab28f83b5285bb
-
 
 # 'Web' aka main repository
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
-# pin to specified commit
-RUN cd web && git checkout 07deed0b0944fbef0c4f0fd121e6b8667621132d
 
 # 'Configuration' repsitory
 RUN git clone --branch maxiv-micromax https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
-# pin to specified commit
-RUN cd conf && git checkout 24816d8952e9ce372629ab21610b1d509c4e3230
 
 # remove web proxy from ISPyB configuration, to avoid emulating web proxy.
 # ISPyB is accessable without proxy on white network.
@@ -65,7 +57,6 @@ RUN /bin/micromamba run -p /opt/conda npm run build
 COPY run.sh /app/
 
 # install our circus 'plug-in'
-RUN mkdir /opt/circus
 COPY tango_ping.py /opt/circus/
 
 COPY circus.conf /etc/
