@@ -39,20 +39,14 @@ RUN micromamba install --name base --channel conda-forge \
 RUN mkdir /app
 WORKDIR /app
 
-# clone 'Configuration' repsitory and pin to specific commit
-RUN git clone --branch maxiv-micromax https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf && \
-    cd conf && \
-    git checkout 4faf987fc732a333d918ac46a99dc6f03d48a332
+# clone 'configuration' repository on master branch
+RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
 
-# clone 'Core' repository and pin to specific commit
-RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core && \
-    cd core && \
-    git checkout b00def6ec3f7c1369353808a812465734fcf1b66
+# clone 'core' repository on maxiv-develop branch
+RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
-# clone 'Web' aka main repository and pin to specific commit
-RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web && \
-    cd web && \
-    git checkout a782c1308f7f2bbbbd6b6b8acddb0064d6a8d317
+# clone 'web' repository on maxiv-develop branch
+RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
 
 # remove web proxy from ISPyB configuration, to avoid emulating web proxy.
 # ISPyB is accessable without proxy on white network.
