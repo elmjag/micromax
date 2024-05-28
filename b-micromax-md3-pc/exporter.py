@@ -22,6 +22,9 @@ WRTE = "WRTE "
 LIST = "LIST"
 EXEC = "EXEC "
 
+BEAMSTOP_TRAVEL_TIME_SEC = 2.6
+BEAMSTOP_POSITIONS = ["PARK", "BEAM", "TRANSFER", "OFF"]
+
 
 def log(msg: str):
     print(msg)
@@ -83,6 +86,9 @@ def parse_val(val_type, val):
 
     if val_type == float:
         return float(val)
+
+    if val_type == str:
+        return val
 
     assert False, f"unsupported value type {val_type}"
 
@@ -179,7 +185,7 @@ class MD3Up:
             "ScanRange": 6.0,
             "ScanNumberOfFrames": 1,
             "AlignmentTablePosition": "TRANSFER",
-            "BeamstopPosition": "TRANSFER",
+            "BeamstopPosition": "PARK",
             "ScintillatorPosition": "UNKNOWN",
             "SampleHolderLength": 22.0,
             "CapillaryVerticalPosition": -93.49539792171772,
@@ -230,6 +236,14 @@ class MD3Up:
             ),
             # void abort()
             "abort": ("void", "", self._do_abort),
+            # Position getBeamstopPosition()
+            "getBeamstopPosition": ("Position", "", self._do_get_beamstop_position),
+            # Position setBeamstopPosition(Position)
+            "setBeamstopPosition": (
+                "Position",
+                "Position",
+                self._do_set_beamstop_position,
+            ),
         }
 
     def _add_task(self, name: str, running_time: float):
@@ -311,6 +325,33 @@ class MD3Up:
     def _do_abort(self):
         # this is NOP for now
         pass
+
+    def _do_get_beamstop_position(self):
+        return self._attrs["BeamstopPosition"]
+
+    async def _update_beamstop_pos(self, new_position):
+        await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
+        self._attrs["BeamstopPosition"] = new_position
+
+    def _do_set_beamstop_position(self, position):
+        if position not in BEAMSTOP_POSITIONS:
+            # MD3 error message when unexpected position specified
+            raise CommandError(
+                "No method with the correct signature: true.setBeamstopPosition"
+            )
+
+        cur_pos = self._attrs["BeamstopPosition"]
+
+        if cur_pos == "UNKNOWN":
+            # beam-stop is currently moving
+            raise CommandError("Cannot execute command: motor is moving")
+
+        if cur_pos == position:
+            # already at requested position, NOP
+            return
+
+        self._attrs["BeamstopPosition"] = "UNKNOWN"
+        asyncio.create_task(self._update_beamstop_pos(position))
 
     def _do_get_motor_dynamic_limits(self, _motor_name: str):
         # return some plausible dummy values for now
