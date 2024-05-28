@@ -139,6 +139,11 @@ class Jungfrau(Device):
         # emulate that it takes some time to dis-arm and stop the detector
         delayed(DISARM_DELAY, set_armed_false)
 
+    @command
+    def Pedestal(self):
+        # NOP for now
+        pass
+
 
 if __name__ == "__main__":
     Jungfrau.run_server()
