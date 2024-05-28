@@ -42,7 +42,7 @@ class Eiger(Device):
         super().__init__(*args, **kwargs)
 
         self._attribute_vals = dict()
-        self._status = "ready"
+        self._status = "idle"
         self._init_writeable_attributes()
 
     def _init_writeable_attributes(self):
@@ -223,6 +223,10 @@ class Eiger(Device):
 
     @command
     def Abort(self):
+        pass
+
+    @command
+    def Trigger(self):
         pass
 
 
