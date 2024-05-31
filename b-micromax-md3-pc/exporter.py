@@ -21,6 +21,7 @@ READ = "READ "
 WRTE = "WRTE "
 LIST = "LIST"
 EXEC = "EXEC "
+NAME = "NAME"
 
 BEAMSTOP_TRAVEL_TIME_SEC = 2.6
 BEAMSTOP_POSITIONS = ["PARK", "BEAM", "TRANSFER", "OFF"]
@@ -518,6 +519,9 @@ class Exporter:
 
             if msg.startswith(LIST):
                 return self._handle_list()
+
+            if msg.startswith(NAME):
+                return "RET:MD"
 
             assert False, f"unexpected message '{msg}'"
 
