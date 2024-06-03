@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Optional
+from typing import Optional, Any
 import asyncio
 import sys
 import math
@@ -25,6 +25,50 @@ NAME = "NAME"
 
 BEAMSTOP_TRAVEL_TIME_SEC = 2.6
 BEAMSTOP_POSITIONS = ["PARK", "BEAM", "TRANSFER", "OFF"]
+
+
+@dataclass
+class Task:
+    name: str
+    # times are in unix epoch seconds
+    start_time: float
+    end_time: float
+
+    def is_running(self) -> bool:
+        return self.end_time > time()
+
+
+# common attribute types
+STATE = "org.embl.State"
+DOUBLE = "java.lang.Double"
+STRING = "java.lang.String"
+INTEGER = "java.lang.Integer"
+BOOLEAN = "java.lang.Boolean"
+
+INITIAL_EVENTS = [
+    "Omega",
+    "AlignmentX",
+    "AlignmentY",
+    "AlignmentZ",
+    "CentringX",
+    "CentringY",
+    "CapillaryVertical",
+    "CapillaryHorizontal",
+    "ApertureVertical",
+    "ApertureHorizontal",
+    "ScintillatorHorizontal",
+    "ScintillatorVertical",
+    "BeamstopX",
+    "BeamstopY",
+    "BeamstopZ",
+    "Zoom",
+]
+
+
+@dataclass
+class Attribute:
+    val: Any
+    type: str
 
 
 def log(msg: str):
@@ -127,17 +171,6 @@ class SynchronizedWriter:
             await self._writer.drain()
 
 
-@dataclass
-class Task:
-    name: str
-    # times are in unix epoch seconds
-    start_time: float
-    end_time: float
-
-    def is_running(self) -> bool:
-        return self.end_time > time()
-
-
 class MD3Up:
     def __init__(self):
         self._synchronization_id = 0
@@ -155,59 +188,103 @@ class MD3Up:
         }
 
         self._attrs = {
-            "AperturePosition": "BEAM",
-            "ApertureDiameters": [5, 10, 15, 20, 50, 600],
-            "AlignmentXPosition": 6.582e-06,
-            "AlignmentXState": "Ready",
-            "AlignmentYPosition": 9.362e-06,
-            "AlignmentYState": "Ready",
-            "AlignmentZPosition": 5.712e-05,
-            "AlignmentZState": "Ready",
-            "FrontLightIsOn": False,
-            "BackLightIsOn": False,
-            "FrontLightFactor": 0.9,
-            "BackLightFactor": 1.6,
-            "BeamstopDistancePosition": 6.863187356482003,
-            "BeamstopZPosition": -94.59997163171106,
-            "CapillaryPosition": "PARK",
-            "OmegaPosition": 359.999979169585,
-            "OmegaState": "Ready",
-            "CentringXPosition": 1.746e-06,
-            "CentringXState": "Ready",
-            "CentringYPosition": 1.174e-05,
-            "CentringYState": "Ready",
-            "CurrentApertureDiameterIndex": 2,
-            "CoaxialCameraZoomValue": 1,
-            "CoaxCamScaleX": 0.0018851562499999997,
-            "CoaxCamScaleY": 0.0018851562499999997,
-            "TransferMode": "SAMPLE_CHANGER",
-            "HeadType": "SmartMagnet",
-            "SampleIsLoaded": False,
-            "CurrentPhase": "Transfer",
-            "ScanStartAngle": 246.798,
-            "ScanExposureTime": 0.663,
-            "ScanRange": 6.0,
-            "ScanNumberOfFrames": 1,
-            "ScintillatorVerticalPosition": -89.99992208163434,
-            "AlignmentTablePosition": "TRANSFER",
-            "BeamstopPosition": "PARK",
-            "ScintillatorPosition": "UNKNOWN",
-            "SampleHolderLength": 22.0,
-            "CapillaryVerticalPosition": -93.49539792171772,
-            "PlateLocation": "null",
-            "CentringTableVerticalPosition": -1.174697170195887e-05,
-            "FastShutterIsOpen": False,
-            "CameraExposure": 40000.0,
-            "LastTaskInfo": [
-                "Hot Start",
-                "0",
-                "2023-08-04 10:41:57.125",
-                "2023-08-04 10:41:57.325",
-                "true",
-                "null",
-                "1",
-            ],
-            "State": "Ready",
+            # note: the AlignmentTablePosition type signature is a guess
+            "AlignmentTablePosition": Attribute(
+                "TRANSFER", "org.embl.md.dev.AlignmentTable$Position"
+            ),
+            "AlignmentXPosition": Attribute(6.582e-06, DOUBLE),
+            "AlignmentXState": Attribute("Ready", STATE),
+            "AlignmentYPosition": Attribute(9.362e-06, DOUBLE),
+            "AlignmentYState": Attribute("Ready", STATE),
+            "AlignmentZPosition": Attribute(5.712e-05, DOUBLE),
+            "AlignmentZState": Attribute("Ready", STATE),
+            "ApertureDiameters": Attribute([5, 10, 15, 20, 50, 600], "TODO"),
+            "ApertureHorizontalPosition": Attribute(0.3077, DOUBLE),
+            "ApertureHorizontalState": Attribute("Ready", STATE),
+            # note: the AperturePosition type signature is a guess
+            "AperturePosition": Attribute("BEAM", "org.embl.md.dev.Aperture$Position"),
+            "ApertureVerticalPosition": Attribute(-4.778, DOUBLE),
+            "ApertureVerticalState": Attribute("Ready", STATE),
+            "BackLightFactor": Attribute(1.6, DOUBLE),
+            "BackLightIsOn": Attribute(False, BOOLEAN),
+            "BeamstopDistancePosition": Attribute(6.863187356482003, DOUBLE),
+            # note: the BeamstopPosition type signature is a guess
+            "BeamstopPosition": Attribute("PARK", "org.embl.md.dev.Beamstop$Position"),
+            "BeamstopXPosition": Attribute(6.93, DOUBLE),
+            "BeamstopXState": Attribute("Ready", STATE),
+            "BeamstopYPosition": Attribute(4.75, DOUBLE),
+            "BeamstopYState": Attribute("Ready", STATE),
+            "BeamstopZPosition": Attribute(-94.3, DOUBLE),
+            "BeamstopZState": Attribute("Ready", STATE),
+            "CameraExposure": Attribute(40000.0, DOUBLE),
+            "CapillaryHorizontalPosition": Attribute(-2.1114864865e-6, DOUBLE),
+            "CapillaryHorizontalState": Attribute("Ready", STATE),
+            # note: the CapillaryPosition type signature is a guess
+            "CapillaryPosition": Attribute(
+                "PARK", "org.embl.md.dev.Capillary$Position"
+            ),
+            "CapillaryVerticalPosition": Attribute(-93.49539792171772, DOUBLE),
+            "CapillaryVerticalState": Attribute("Ready", STATE),
+            "CentringTableVerticalPosition": Attribute(-1.174697170195887e-05, DOUBLE),
+            "CentringXPosition": Attribute(1.746e-06, DOUBLE),
+            "CentringXState": Attribute("Ready", STATE),
+            "CentringYPosition": Attribute(1.174e-05, DOUBLE),
+            "CentringYState": Attribute("Ready", STATE),
+            "CoaxCamScaleX": Attribute(0.0018851562499999997, DOUBLE),
+            "CoaxCamScaleY": Attribute(0.0018851562499999997, DOUBLE),
+            "CoaxialCameraZoomValue": Attribute(1, INTEGER),
+            "CurrentApertureDiameterIndex": Attribute(2, INTEGER),
+            # note: the CurrentPhase type signature is a guess
+            "CurrentPhase": Attribute(
+                "Transfer",
+                "org.embl.md.RemoteInterface$Phase",
+            ),
+            "DetectorDistance": Attribute(700.0, DOUBLE),
+            "DetectorState": Attribute("Ready", STATE),
+            "FastShutterIsOpen": Attribute(False, BOOLEAN),
+            "FrontLightFactor": Attribute(0.9, DOUBLE),
+            "FrontLightIsOn": Attribute(False, BOOLEAN),
+            # note: the HeadType type signature is a guess
+            "HeadType": Attribute(
+                "SmartMagnet", "org.embl.md.RemoteInterface$HeadType"
+            ),
+            "LastTaskInfo": Attribute(
+                [
+                    "Hot Start",
+                    "0",
+                    "2023-08-04 10:41:57.125",
+                    "2023-08-04 10:41:57.325",
+                    "true",
+                    "null",
+                    "1",
+                ],
+                "TODO",
+            ),
+            "OmegaPosition": Attribute(359.999979169585, DOUBLE),
+            "OmegaState": Attribute("Ready", STATE),
+            "PlateLocation": Attribute("null", "TODO"),
+            "SampleHolderLength": Attribute(22.0, DOUBLE),
+            "SampleIsLoaded": Attribute(False, BOOLEAN),
+            "ScanExposureTime": Attribute(0.663, DOUBLE),
+            "ScanNumberOfFrames": Attribute(1, INTEGER),
+            "ScanRange": Attribute(6.0, DOUBLE),
+            "ScanStartAngle": Attribute(246.798, DOUBLE),
+            "ScintillatorHorizontalPosition": Attribute(-89.99992208163434, DOUBLE),
+            "ScintillatorHorizontalState": Attribute("Ready", STATE),
+            # note: the ScintillatorPosition type signature is a guess
+            "ScintillatorPosition": Attribute(
+                "UNKNOWN", "org.embl.md.dev.Scintillator$Position"
+            ),
+            "ScintillatorVerticalPosition": Attribute(-89.99992208163434, DOUBLE),
+            "ScintillatorVerticalState": Attribute("Ready", STATE),
+            "State": Attribute("Ready", STATE),
+            "Status": Attribute("Ready", STRING),
+            # note: the TransferMode type signature is a guess
+            "TransferMode": Attribute(
+                "SAMPLE_CHANGER", "org.embl.md.RemoteInterface$TransferMode"
+            ),
+            "ZoomPosition": Attribute(0.0, DOUBLE),
+            "ZoomState": Attribute("Ready", STATE),
         }
 
         self._commands = {
@@ -332,11 +409,11 @@ class MD3Up:
         pass
 
     def _do_get_beamstop_position(self):
-        return self._attrs["BeamstopPosition"]
+        return self._attrs["BeamstopPosition"].val
 
     async def _update_beamstop_pos(self, new_position):
         await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
-        self._attrs["BeamstopPosition"] = new_position
+        self._attrs["BeamstopPosition"].val = new_position
 
     def _do_set_beamstop_position(self, position):
         if position not in BEAMSTOP_POSITIONS:
@@ -345,7 +422,7 @@ class MD3Up:
                 "No method with the correct signature: true.setBeamstopPosition"
             )
 
-        cur_pos = self._attrs["BeamstopPosition"]
+        cur_pos = self._attrs["BeamstopPosition"].val
 
         if cur_pos == "UNKNOWN":
             # beam-stop is currently moving
@@ -355,7 +432,7 @@ class MD3Up:
             # already at requested position, NOP
             return
 
-        self._attrs["BeamstopPosition"] = "UNKNOWN"
+        self._attrs["BeamstopPosition"].val = "UNKNOWN"
         asyncio.create_task(self._update_beamstop_pos(position))
 
     def _do_get_motor_dynamic_limits(self, _motor_name: str):
@@ -379,18 +456,21 @@ class MD3Up:
 
         return motor_name
 
-    def read_attribute(self, attribute_name: str):
-        val = self._attrs.get(attribute_name)
-        if val is None:
+    def get_attribute(self, attribute_name: str) -> Attribute:
+        attr = self._attrs.get(attribute_name)
+        if attr is None:
             raise UnknownAttribute()
 
-        return val
+        return attr
 
     def write_attribute(self, attribute_name: str, attribute_value):
         if attribute_name not in self._attrs:
             raise UnknownAttribute()
 
-        self._attrs[attribute_name] = attribute_value
+        attr = self._attrs[attribute_name]
+        attr.val = attribute_value
+
+        return attr
 
     def list_commands(self):
         for name, (ret_type, args, _) in self._commands.items():
@@ -427,13 +507,16 @@ class Exporter:
         # chop off STX and ETX bytes
         return message[1:-1].decode()
 
-    async def _update_attribute(self, writer: SynchronizedWriter, name: str, val):
-        self._md3.write_attribute(name, val)
-
-        timestamp = int(time())
-        msg = f"EVT:{name}\t{val}\t{timestamp}\torg.embl.State"
-
+    async def _send_evt_message(
+        self, writer: SynchronizedWriter, attr_name, attr_val, attr_type, timestamp
+    ):
+        msg = f"EVT:{attr_name}\t{attr_val}\t{timestamp}\t{attr_type}"
         await self._write_reply(writer, msg)
+
+    async def _update_attribute(self, writer: SynchronizedWriter, name: str, val):
+        attr = self._md3.write_attribute(name, val)
+        timestamp = int(time())
+        await self._send_evt_message(writer, name, attr.val, attr.type, timestamp)
 
     async def _move_motor(
         self, writer: SynchronizedWriter, motor_name: str, new_pos: float
@@ -441,7 +524,7 @@ class Exporter:
         motor_pos_attr = f"{motor_name}Position"
         motor_state_attr = f"{motor_name}State"
 
-        start_pos = self._md3.read_attribute(motor_pos_attr)
+        start_pos = self._md3.get_attribute(motor_pos_attr).val
         step = (new_pos - start_pos) / MOTOR_STEPS
 
         await self._update_attribute(writer, motor_state_attr, "Moving")
@@ -461,8 +544,8 @@ class Exporter:
 
     def _handle_read(self, attr_name: str) -> str:
         try:
-            val = self._md3.read_attribute(attr_name)
-            return f"RET:{encode_val(val)}"
+            attr = self._md3.get_attribute(attr_name)
+            return f"RET:{encode_val(attr.val)}"
         except UnknownAttribute:
             log(f"WARNING: read command for an unknown attribute '{attr_name}'")
             # this seems to be the error message MD3UP generates for unknown attributes
@@ -470,14 +553,15 @@ class Exporter:
 
     def _handle_write(self, slug: str, writer: SynchronizedWriter) -> str:
         name, val = slug.split(" ", 2)
-        attr_type = type(self._md3.read_attribute(name))
+        attr_type = type(self._md3.get_attribute(name).val)
         val = parse_val(attr_type, val)
 
         motor_name = self._md3.get_motor_name(name)
         if motor_name is None:
-            # this is a motor position attribute, emulate moving motor
+            # write non-motor attribute
             asyncio.create_task(self._update_attribute(writer, name, val))
         else:
+            # this is a motor position attribute, emulate moving motor
             asyncio.create_task(self._move_motor(writer, motor_name, val))
 
         return "NULL"
@@ -506,6 +590,35 @@ class Exporter:
 
         return f"RET:{cmds}"
 
+    async def _send_initial_events(self, writer: SynchronizedWriter):
+        async def send_message(attr_name, msg_name):
+            attr = self._md3.get_attribute(attr_name)
+            await self._send_evt_message(
+                writer, msg_name, attr.val, attr.type, timestamp
+            )
+
+        timestamp = int(time())
+
+        await send_message("State", "State")
+        await send_message("Status", "Status")
+
+        for name in INITIAL_EVENTS:
+            state = f"{name}State"
+            position = f"{name}Position"
+            await send_message(state, state)
+            await send_message(position, state)
+
+        await send_message("DetectorState", "DetectorState")
+        await send_message("DetectorDistance", "DetectorState")
+
+        # MD3 sends CurrentApertureDiameterIndex event twice for some reason
+        await send_message(
+            "CurrentApertureDiameterIndex", "CurrentApertureDiameterIndex"
+        )
+        await send_message(
+            "CurrentApertureDiameterIndex", "CurrentApertureDiameterIndex"
+        )
+
     async def _handle_message(self, msg: str, writer: SynchronizedWriter):
         def get_reply():
             if msg.startswith(READ):
@@ -531,6 +644,8 @@ class Exporter:
         log("MD3 new connection")
 
         sync_writer = SynchronizedWriter(writer)
+
+        await self._send_initial_events(sync_writer)
 
         try:
             while True:
