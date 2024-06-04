@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Optional, Any
+from typing import Optional, Any, Callable
 import asyncio
 import sys
 import math
@@ -24,19 +24,12 @@ EXEC = "EXEC "
 NAME = "NAME"
 
 BEAMSTOP_TRAVEL_TIME_SEC = 2.6
+# supported predefined beamstop positions
 BEAMSTOP_POSITIONS = ["PARK", "BEAM", "TRANSFER", "OFF"]
 
-
-@dataclass
-class Task:
-    name: str
-    # times are in unix epoch seconds
-    start_time: float
-    end_time: float
-
-    def is_running(self) -> bool:
-        return self.end_time > time()
-
+PHASE_CHANGE_TIME_SEC = 3.1
+# supported MD3 phases
+PHASES = ["Centring", "BeamLocation", "DataCollection", "Transfer"]
 
 # common attribute types
 STATE = "org.embl.State"
@@ -69,6 +62,32 @@ INITIAL_EVENTS = [
 class Attribute:
     val: Any
     type: str
+
+
+@dataclass
+class Task:
+    name: str
+    # times are in unix epoch seconds
+    start_time: float
+    end_time: float
+
+    def is_running(self) -> bool:
+        return self.end_time > time()
+
+
+AttributeUpdatedCallback = Callable[[str, Attribute, int], None]
+
+
+class UnknownAttribute(Exception):
+    pass
+
+
+class UnknownCommand(Exception):
+    pass
+
+
+class CommandError(Exception):
+    pass
 
 
 def log(msg: str):
@@ -148,18 +167,6 @@ def epoch_as_text(epoch: float) -> str:
     return txt[:-3]
 
 
-class UnknownAttribute(Exception):
-    pass
-
-
-class UnknownCommand(Exception):
-    pass
-
-
-class CommandError(Exception):
-    pass
-
-
 class SynchronizedWriter:
     def __init__(self, writer: StreamWriter):
         self._writer = writer
@@ -173,8 +180,8 @@ class SynchronizedWriter:
 
 class MD3Up:
     def __init__(self):
+        self._attr_updated_callbacks = set()
         self._synchronization_id = 0
-
         self._tasks = {}
 
         self._motors = {
@@ -234,7 +241,6 @@ class MD3Up:
             "CoaxCamScaleY": Attribute(0.0018851562499999997, DOUBLE),
             "CoaxialCameraZoomValue": Attribute(1, INTEGER),
             "CurrentApertureDiameterIndex": Attribute(2, INTEGER),
-            # note: the CurrentPhase type signature is a guess
             "CurrentPhase": Attribute(
                 "Transfer",
                 "org.embl.md.RemoteInterface$Phase",
@@ -350,8 +356,20 @@ class MD3Up:
     def _do_get_motor_limits(self, motor_name) -> tuple[float, float]:
         return self._motors[motor_name]
 
-    def _do_start_set_phase(self, _phase) -> int:
-        return self._add_task(f"Set {_phase.upper()} PHASE", 2.3)
+    def _do_start_set_phase(self, phase) -> int:
+        async def update_current_phase():
+            self.write_attribute("CurrentPhase", "Unknown")
+            await asyncio.sleep(PHASE_CHANGE_TIME_SEC)
+            self.write_attribute("CurrentPhase", phase)
+
+        if phase not in PHASES:
+            # MD3 error message when unexpected phase specified
+            raise CommandError(
+                "No method with the correct signature: true.startSetPhase"
+            )
+
+        asyncio.create_task(update_current_phase())
+        return self._add_task(f"Set {phase.upper()} PHASE", PHASE_CHANGE_TIME_SEC + 0.1)
 
     def _do_start_raster_scan(
         self,
@@ -411,11 +429,12 @@ class MD3Up:
     def _do_get_beamstop_position(self):
         return self._attrs["BeamstopPosition"].val
 
-    async def _update_beamstop_pos(self, new_position):
-        await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
-        self._attrs["BeamstopPosition"].val = new_position
-
     def _do_set_beamstop_position(self, position):
+        async def update_beamstop_pos():
+            self.write_attribute("BeamstopPosition", "UNKNOWN")
+            await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
+            self.write_attribute("BeamstopPosition", position)
+
         if position not in BEAMSTOP_POSITIONS:
             # MD3 error message when unexpected position specified
             raise CommandError(
@@ -432,12 +451,21 @@ class MD3Up:
             # already at requested position, NOP
             return
 
-        self._attrs["BeamstopPosition"].val = "UNKNOWN"
-        asyncio.create_task(self._update_beamstop_pos(position))
+        asyncio.create_task(update_beamstop_pos())
 
     def _do_get_motor_dynamic_limits(self, _motor_name: str):
         # return some plausible dummy values for now
         return [-2.97366048458438, 2.970646846947152]
+
+    def add_attribute_updated_callback(
+        self, attribute_update_cb: AttributeUpdatedCallback
+    ):
+        self._attr_updated_callbacks.add(attribute_update_cb)
+
+    def remove_attribute_updated_callback(
+        self, attribute_update_cb: AttributeUpdatedCallback
+    ):
+        self._attr_updated_callbacks.remove(attribute_update_cb)
 
     def get_motor_name(self, attribute_name: str) -> Optional[str]:
         """
@@ -464,11 +492,12 @@ class MD3Up:
         return attr
 
     def write_attribute(self, attribute_name: str, attribute_value):
-        if attribute_name not in self._attrs:
-            raise UnknownAttribute()
-
-        attr = self._attrs[attribute_name]
+        timestamp = int(time())
+        attr = self.get_attribute(attribute_name)
         attr.val = attribute_value
+
+        for attr_cb in self._attr_updated_callbacks:
+            attr_cb(attribute_name, attr, timestamp)
 
         return attr
 
@@ -513,10 +542,16 @@ class Exporter:
         msg = f"EVT:{attr_name}\t{attr_val}\t{timestamp}\t{attr_type}"
         await self._write_reply(writer, msg)
 
-    async def _update_attribute(self, writer: SynchronizedWriter, name: str, val):
-        attr = self._md3.write_attribute(name, val)
-        timestamp = int(time())
-        await self._send_evt_message(writer, name, attr.val, attr.type, timestamp)
+    def _attribute_updated(
+        self,
+        writer: SynchronizedWriter,
+        attr_name: str,
+        attr: Attribute,
+        timestamp: int,
+    ):
+        asyncio.create_task(
+            self._send_evt_message(writer, attr_name, attr.val, attr.type, timestamp)
+        )
 
     async def _move_motor(
         self, writer: SynchronizedWriter, motor_name: str, new_pos: float
@@ -527,7 +562,7 @@ class Exporter:
         start_pos = self._md3.get_attribute(motor_pos_attr).val
         step = (new_pos - start_pos) / MOTOR_STEPS
 
-        await self._update_attribute(writer, motor_state_attr, "Moving")
+        self._md3.write_attribute(motor_state_attr, "Moving")
 
         for n in range(1, MOTOR_STEPS + 1):
             step_pos = start_pos + (n * step)
@@ -537,10 +572,10 @@ class Exporter:
             if motor_name == "Omega":
                 step_pos = step_pos % 360.0
 
-            await self._update_attribute(writer, motor_pos_attr, step_pos)
+            self._md3.write_attribute(motor_pos_attr, step_pos)
             await asyncio.sleep(2 / MOTOR_STEPS)
 
-        await self._update_attribute(writer, motor_state_attr, "Ready")
+        self._md3.write_attribute(motor_state_attr, "Ready")
 
     def _handle_read(self, attr_name: str) -> str:
         try:
@@ -559,7 +594,7 @@ class Exporter:
         motor_name = self._md3.get_motor_name(name)
         if motor_name is None:
             # write non-motor attribute
-            asyncio.create_task(self._update_attribute(writer, name, val))
+            self._md3.write_attribute(name, val)
         else:
             # this is a motor position attribute, emulate moving motor
             asyncio.create_task(self._move_motor(writer, motor_name, val))
@@ -644,6 +679,10 @@ class Exporter:
         log("MD3 new connection")
 
         sync_writer = SynchronizedWriter(writer)
+        attrs_update_callback = lambda name, attr, timestamp: self._attribute_updated(
+            sync_writer, name, attr, timestamp
+        )
+        self._md3.add_attribute_updated_callback(attrs_update_callback)
 
         await self._send_initial_events(sync_writer)
 
@@ -651,6 +690,9 @@ class Exporter:
             while True:
                 msg = await self._read_message(reader)
                 await self._handle_message(msg, sync_writer)
+        except asyncio.IncompleteReadError:
+            self._md3.remove_attribute_updated_callback(attrs_update_callback)
+            log("connection closed")
         except Exception as ex:
             log(f"error: {str(ex)}")
             traceback.print_exception(ex)
