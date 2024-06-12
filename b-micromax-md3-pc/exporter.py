@@ -310,6 +310,13 @@ class MD3Up:
                 "int, double, double, double, int",
                 self._do_start_scan_ex,
             ),
+            # int startScan4DEx(double, double, double, double, double, double,
+            #                   double, double, double, double, double)
+            "startScan4DEx": (
+                "int",
+                "double, double, double, double, double, double, double, double, double, double, double",
+                self._do_start_scan_4d_ex,
+            ),
             # boolean isTaskRunning(int)
             "isTaskRunning": ("boolean", "int", self._do_is_task_running),
             # String[] getTaskInfo(int)
@@ -392,6 +399,9 @@ class MD3Up:
         _number_of_passes,
     ) -> int:
         return self._add_task("Start SCAN", 3.2)
+
+    def _do_start_scan_4d_ex(self, *_):
+        return self._add_task("Start 4D-SCAN", 3.2)
 
     def _do_is_task_running(self, task_id) -> bool:
         task = self._get_task(task_id)
