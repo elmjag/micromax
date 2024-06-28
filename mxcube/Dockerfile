@@ -71,6 +71,12 @@ RUN mkdir /opt/mxcube
 RUN mv /app/web/ui/build /opt/mxcube
 
 #
+# space group look-up file
+#
+RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/
+COPY spg_pro_xtal_tab.txt /mxn/groups/sw/mxsw/mxcube_scripts/
+
+#
 # install crystfel template files
 #
 RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
