@@ -58,7 +58,7 @@ class Dcct(Device):
 
     @attribute(name="Lifetime", dtype=float)
     def lifetime(self):
-        return -539.76
+        return 33627.44279505807
 
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@ class Billboard(Device):
 
     @attribute(name="R3NextInjection", dtype=str)
     def r3_next_injection(self):
-        return "Unplanned"
+        return "2024-06-12 14:00:00"
 
     @attribute(name="MachineMessage", dtype=str)
     def machine_message(self):
@@ -53,6 +53,10 @@ class Billboard(Device):
     @attribute(name="R3TopUp", dtype=int)
     def r3_top_up(self):
         return -1
+
+    @attribute(name="R3Mode", dtype=str)
+    def r3_mode(self):
+        return "Delivery: Top-Up"
 
 
 if __name__ == "__main__":
