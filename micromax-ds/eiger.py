@@ -1,8 +1,21 @@
 #!/usr/bin/env python
+import time
 from typing import Optional, Union, Any
 from dataclasses import dataclass
+from threading import Thread
 from tango import AttrWriteType, DevLong
 from tango.server import Device, attribute, command
+
+
+SOFTWARE_TRIGGERED_COLLECTION_LENGTH = 12.0
+
+
+def delayed(delay, delayed_call):
+    def run():
+        time.sleep(delay)
+        delayed_call()
+
+    Thread(target=run).start()
 
 
 @dataclass
@@ -223,11 +236,24 @@ class Eiger(Device):
 
     @command
     def Abort(self):
-        pass
+        self._status = "idle"
 
     @command
     def Trigger(self):
-        pass
+        if self._status != "ready":
+            # detector is unarmed, can't be triggered
+            raise Exception(
+                "Detector in idle state, not 'ready',  try the arm command first"
+            )
+
+        self._status = "acquire"
+
+        def datacollection_finished():
+            if self._status == "acquire":
+                # collection finished, unless it was aborted earlier
+                self._status = "idle"
+
+        delayed(SOFTWARE_TRIGGERED_COLLECTION_LENGTH, datacollection_finished)
 
 
 if __name__ == "__main__":
