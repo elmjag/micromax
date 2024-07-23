@@ -1,18 +1,15 @@
-FROM mambaorg/micromamba:1.4.2
+FROM mambaorg/micromamba:1.5.8
 
 USER root
 RUN apt-get update
-RUN apt-get -y install nano
+RUN apt-get -y install nano git
 
 RUN micromamba install --name base --channel conda-forge \
-    python=3.10.9
+    python=3.11.9 typing-extensions=4.10.0
 
-RUN mkdir /isara
-
-
-COPY emu/*.py /isara/emu/
-COPY overlord/*.py /isara/overlord/
-COPY isara.py overlord.py /isara
+RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/dev-maxiv-isara2.git /isara && \
+    cd /isara && git checkout 2.0.0
+COPY run.py /isara
 
 WORKDIR /isara
-CMD ["/isara/isara.py"]
+CMD ["/isara/run.py"]
