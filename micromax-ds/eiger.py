@@ -46,6 +46,7 @@ WRITEABLE_ATTRIBUTES = [
     _WriteableAttr("OmegaIncrement", float, 0.1),
     _WriteableAttr("RoiMode", str, "disabled"),
     _WriteableAttr("TriggerMode", str, "exts"),
+    _WriteableAttr("HeaderDetail", str, "basic"),
     _WriteableAttr("HeaderAppendix", str, "{}"),
 ]
 
@@ -181,10 +182,6 @@ class Eiger(Device):
     @attribute(name="CollectionUUID", dtype=str)
     def collection_uuid(self):
         return "f12336a0-dcbe-484d-9f86-2fc4ac614846"
-
-    @attribute(name="HeaderDetail", dtype=str)
-    def header_detail(self):
-        return "HeaderDetail TBD"
 
     @attribute(name="ImageAppendix", dtype=str)
     def image_appendix(self):
