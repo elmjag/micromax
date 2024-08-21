@@ -53,8 +53,6 @@ RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcub
 COPY no_lims_proxy.patch /tmp
 RUN cd conf && git apply /tmp/no_lims_proxy.patch
 
-# remove 'mxcubecore' and 'mxcube_video_streamer' packages from dependencies
-RUN sed -i '/^mxcubecore\|^mxcube_video_streamer/d' web/pyproject.toml
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core
 
