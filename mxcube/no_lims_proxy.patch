@@ -1,8 +1,8 @@
-diff --git a/MicroMAX/lims.xml b/MicroMAX/lims.xml
-index bcf85fb..3076ad1 100644
---- a/MicroMAX/lims.xml
-+++ b/MicroMAX/lims.xml
-@@ -16,5 +16,4 @@
+diff --git a/micromax-templates/lims.xml b/micromax-templates/lims.xml
+index 1931f0a..4cd377b 100644
+--- a/micromax-templates/lims.xml
++++ b/micromax-templates/lims.xml
+@@ -15,5 +15,4 @@
    <loginTranslate>false</loginTranslate>
    <loginType>user</loginType>
    <object role="session" href="/session"/>

@@ -39,19 +39,11 @@ RUN micromamba install --name base --channel conda-forge \
 RUN mkdir /app
 WORKDIR /app
 
-# clone 'configuration' repository on master branch
-RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
-
 # clone 'core' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
 # clone 'web' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
-
-# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
-# ISPyB is accessable without proxy on white network.
-COPY no_lims_proxy.patch /tmp
-RUN cd conf && git apply /tmp/no_lims_proxy.patch
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core
@@ -79,6 +71,26 @@ COPY spg_pro_xtal_tab.txt /mxn/groups/sw/mxsw/mxcube_scripts/
 #
 RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
 COPY jungfrau_geom_temp.txt crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_scripts/template/
+
+#
+# install MXCuBE configuration dashboard
+#
+WORKDIR /app
+RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/app-micromax-dashboard.git dboard
+COPY dashboard-settings dboard/settings.py
+
+# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
+# ISPyB is accessable without proxy on white network.
+COPY no_lims_proxy.patch /tmp
+RUN cd dboard && git apply /tmp/no_lims_proxy.patch
+
+# generate initial MXCuBE configuration files
+RUN cd dboard && /bin/micromamba run -p /opt/conda ./write_configs.py
+
+# build the front-end
+WORKDIR /app/dboard/ui
+RUN /bin/micromamba run -p /opt/conda pnpm install
+RUN /bin/micromamba run -p /opt/conda pnpm run build
 
 #
 # install convenience scripts for running MXCuBE from terminal
