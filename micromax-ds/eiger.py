@@ -99,6 +99,22 @@ class Eiger(Device):
     # read-only attributes
     #
 
+    @attribute(name="KappaIncrement", dtype=float)
+    def kappa_increment(self):
+        return -1.0
+
+    @attribute(name="KappaStart", dtype=float)
+    def kappa_start(self):
+        return 0.0
+
+    @attribute(name="PhiIncrement", dtype=float)
+    def phi_increment(self):
+        return 0.0
+
+    @attribute(name="PhiStart", dtype=float)
+    def phi_start(self):
+        return 0.0
+
     @attribute(name="CountrateCorrectionCountCutoff", dtype=DevLong)
     def count_rate_correction_count_cutoff(self):
         return 83270
