@@ -93,5 +93,13 @@ COPY tango_ping.py /opt/circus/
 
 COPY circus.conf /etc/
 
+#
+# allows us to run git commands when these folder
+# are bound to host folders in docker-compose.yml
+#
+RUN git config --global --add safe.directory /app/conf
+RUN git config --global --add safe.directory /app/web
+RUN git config --global --add safe.directory /app/core
+
 WORKDIR /app
 CMD [ "/opt/conda/bin/circusd", "/etc/circus.conf" ]
