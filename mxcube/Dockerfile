@@ -8,7 +8,7 @@ RUN apt-get -y install \
     # to do the needful
     git \
     # for troubleshooting
-    iputils-ping nano
+    procps tree iputils-ping nano
 
 COPY activedirectory.yml /etc/sdm/
 
