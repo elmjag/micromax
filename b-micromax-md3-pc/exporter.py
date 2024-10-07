@@ -192,6 +192,7 @@ class MD3Up:
             "Omega": (-math.inf, math.inf),
             "CentringX": (-3.05, 3.05),
             "CentringY": (-3.05, 3.5),
+            "CentringTableFocus": (-3.19668, 3.19871),
         }
 
         self._attrs = {
@@ -230,6 +231,8 @@ class MD3Up:
             "CapillaryPosition": Attribute(
                 "PARK", "org.embl.md.dev.Capillary$Position"
             ),
+            "CentringTableFocusPosition": Attribute(0.42, DOUBLE),
+            "CentringTableFocusState": Attribute("Ready", STATE),
             "CapillaryVerticalPosition": Attribute(-93.49539792171772, DOUBLE),
             "CapillaryVerticalState": Attribute("Ready", STATE),
             "CentringTableVerticalPosition": Attribute(-1.174697170195887e-05, DOUBLE),
