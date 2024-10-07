@@ -35,6 +35,7 @@ WRITEABLE_ATTRIBUTES = [
     _WriteableAttr("goniometer__vector__#3", float, 0.0),
     _WriteableAttr("detector_distance_mm", float, 0),
     _WriteableAttr("image_time_us", int, 0),
+    _WriteableAttr("images_per_file", int, 0),
     _WriteableAttr("images_per_trigger", int, 0),
     _WriteableAttr("incident_energy_keV", float, 0),
     _WriteableAttr("ntrigger", int, 0),
