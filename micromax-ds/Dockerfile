@@ -11,6 +11,10 @@ RUN micromamba install --name base --channel conda-forge \
     circus=0.18.0
 
 RUN micromamba install --name base --channel maxiv-kits \
+    # pin numpy, as taurus (sardana's dependency)
+    # does not work with numpy 2
+    # https://gitlab.com/taurus-org/taurus/-/issues/1352
+    numpy=1.26.4 \
     sardana=3.4.3post0+maxiv \
     tangods-mxdetectorcovers=1.0.1 \
     tangods-isara2=2.0.0 \
