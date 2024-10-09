@@ -29,7 +29,7 @@ RUN micromamba install --name base --channel conda-forge \
     pnpm=9.1.1 \
     # MAXIV specific packages for MXCube
     sdm=1.8.10 \
-    sardana=3.4.4 \
+    sardana=3.5.0post0+maxiv \
     scifish=1.3.2
 
 #

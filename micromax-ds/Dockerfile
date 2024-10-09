@@ -15,7 +15,7 @@ RUN micromamba install --name base --channel maxiv-kits \
     # does not work with numpy 2
     # https://gitlab.com/taurus-org/taurus/-/issues/1352
     numpy=1.26.4 \
-    sardana=3.4.3post0+maxiv \
+    sardana=3.5.0post0+maxiv \
     tangods-mxdetectorcovers=1.0.1 \
     tangods-isara2=2.0.0 \
     tangods-micromax-panda=1.3.0
