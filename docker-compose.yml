@@ -45,7 +45,8 @@ services:
       context: csproxy-ds
   mxcube:
     ports:
-     - "8081:8081"
+     - "8081:8081"  # MXCuBE
+     - "5000:5000"  # Dashboard
     environment:
      - TANGO_HOST=tango-cs:10000
     build:

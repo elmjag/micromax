@@ -33,25 +33,34 @@ RUN micromamba install --name base --channel conda-forge \
     scifish=1.3.2
 
 #
+# install MicroMAX Dashboard
+#
+
+RUN micromamba create --name dashboard
+RUN micromamba install --name dashboard app-micromax-dashboard=0.0.1
+
+# add emulator specific dashboard configuration
+COPY dboard_config.py /opt/conda/envs/dashboard/lib/python3.11/site-packages/dboard/config.py
+
+# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
+# ISPyB is accessible without proxy on white network.
+RUN cd /opt/conda/envs/dashboard/lib/python3.11/site-packages/dboard/static/micromax-templates && \
+    sed -i '/<proxy_address>http/d' lims.xml
+
+# generate initial MXCuBE configuration files
+RUN /opt/conda/envs/dashboard/bin/write_mxcube_config
+
+#
 # clone mxcube repositories
 #
 
-RUN mkdir /app
 WORKDIR /app
-
-# clone 'configuration' repository on master branch
-RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
 
 # clone 'core' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
 # clone 'web' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
-
-# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
-# ISPyB is accessable without proxy on white network.
-COPY no_lims_proxy.patch /tmp
-RUN cd conf && git apply /tmp/no_lims_proxy.patch
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core
