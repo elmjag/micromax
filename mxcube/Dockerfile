@@ -87,6 +87,9 @@ COPY jungfrau_geom_temp.txt crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_s
 #
 COPY run.sh start.sh /app/
 
+# MD3 front and back lights toggler script
+COPY md3_light.py /app/
+
 # install our circus 'plug-in'
 RUN mkdir /opt/circus
 COPY tango_ping.py /opt/circus/
