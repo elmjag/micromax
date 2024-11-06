@@ -552,7 +552,8 @@ class Exporter:
     async def _send_evt_message(
         self, writer: SynchronizedWriter, attr_name, attr_val, attr_type, timestamp
     ):
-        msg = f"EVT:{attr_name}\t{attr_val}\t{timestamp}\t{attr_type}"
+        val = encode_val(attr_val)
+        msg = f"EVT:{attr_name}\t{val}\t{timestamp}\t{attr_type}"
         await self._write_reply(writer, msg)
 
     def _attribute_updated(
