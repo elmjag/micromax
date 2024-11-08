@@ -17,7 +17,7 @@ COPY ca.crt user.crt user.key /etc/ssl/certs/kafka/
 
 COPY condarc /opt/conda/.condarc
 RUN micromamba install --name base --channel conda-forge \
-    python=3.10.13 \
+    python=3.11.10 \
     pytango=9.4.1 \
     itango=0.1.9 \
     redis-server=7.0.11 \
