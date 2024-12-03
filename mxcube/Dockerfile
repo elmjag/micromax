@@ -1,10 +1,12 @@
-FROM mambaorg/micromamba:1.5.6
+FROM mambaorg/micromamba:1.5.10
 
 USER root
 RUN apt-get update
 RUN apt-get -y install \
     # need for lucid3
     libgl1-mesa-glx \
+    # for video streamer
+    ffmpeg \
     # to do the needful
     git \
     # for troubleshooting
@@ -56,6 +58,7 @@ RUN /opt/conda/envs/dashboard/bin/write_mxcube_config
 
 WORKDIR /app
 
+
 # clone 'core' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
@@ -64,6 +67,7 @@ RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcub
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core
+
 
 # build front-end
 WORKDIR /app/web/ui
