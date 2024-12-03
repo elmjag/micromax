@@ -25,7 +25,6 @@ class _WriteableAttr:
 WRITEABLE_ATTRIBUTES = [
     _WriteableAttr("beam_x_pxl", float, 0.0),
     _WriteableAttr("beam_y_pxl", float, 0.0),
-    _WriteableAttr("storage_cell_count", int, 15),
     _WriteableAttr("file_prefix", str, ""),
     _WriteableAttr("goniometer__name", str, ""),
     _WriteableAttr("goniometer__start", float, 0.0),
@@ -40,7 +39,6 @@ WRITEABLE_ATTRIBUTES = [
     _WriteableAttr("incident_energy_keV", float, 0),
     _WriteableAttr("ntrigger", int, 0),
     _WriteableAttr("frame_time_us", int, 500),
-    _WriteableAttr("summation", int, 5),
     _WriteableAttr("unit_cell__a", float, 0.0),
     _WriteableAttr("unit_cell__b", float, 0.0),
     _WriteableAttr("unit_cell__c", float, 0.0),
