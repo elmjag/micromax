@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.6
+FROM mambaorg/micromamba:1.5.10
 
 USER root
 RUN apt-get update
@@ -22,6 +22,8 @@ RUN micromamba install --name base --channel conda-forge \
     itango=0.1.9 \
     redis-server=7.0.11 \
     circus=0.18.0 \
+    # for video streamer
+    ffmpeg \
     # install as conda package, so pip does not try to compile it
     python-ldap=3.4.3 \
     # for building front-end \
@@ -37,10 +39,10 @@ RUN micromamba install --name base --channel conda-forge \
 #
 
 RUN micromamba create --name dashboard
-RUN micromamba install --name dashboard app-micromax-dashboard=0.0.3
+RUN micromamba install --name dashboard app-micromax-dashboard=0.0.4
 
 # add emulator specific dashboard configuration
-COPY dboard_config.py /opt/conda/envs/dashboard/lib/python3.11/site-packages/dboard/config.py
+COPY dboard_config.py /opt/dashboard/config.py
 
 # remove web proxy from ISPyB configuration, to avoid emulating web proxy.
 # ISPyB is accessible without proxy on white network.
