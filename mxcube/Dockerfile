@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.6
+FROM mambaorg/micromamba:1.5.10
 
 USER root
 RUN apt-get update
@@ -22,6 +22,8 @@ RUN micromamba install --name base --channel conda-forge \
     itango=0.1.9 \
     redis-server=7.0.11 \
     circus=0.18.0 \
+    # for video streamer
+    ffmpeg \
     # install as conda package, so pip does not try to compile it
     python-ldap=3.4.3 \
     # for building front-end \
@@ -56,6 +58,7 @@ RUN /opt/conda/envs/dashboard/bin/write_mxcube_config
 
 WORKDIR /app
 
+
 # clone 'core' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
@@ -64,6 +67,7 @@ RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcub
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core
+
 
 # build front-end
 WORKDIR /app/web/ui
