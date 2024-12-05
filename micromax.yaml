@@ -1,29 +1,22 @@
 services:
-  mysql:
+  tango-db:
     environment:
      - MYSQL_ROOT_PASSWORD=root
     build:
-      context: mysql
+      context: micromax/tango-db
   tango-cs:
     image: registry.gitlab.com/tango-controls/docker/tango-cs:9.3.5
     ports:
      - "10000:10000"
     environment:
      - TANGO_HOST=localhost:10000
-     - MYSQL_HOST=mysql:3306
+     - MYSQL_HOST=tango-db:3306
      - MYSQL_USER=tango
      - MYSQL_PASSWORD=tango
      - MYSQL_DATABASE=tango
     depends_on:
-     - mysql
-  micromax-ds:
-    environment:
-     - TANGO_HOST=tango-cs:10000
-    build:
-      context: micromax-ds
-    depends_on:
-     - tango-cs
-  mysql-2:
+     - tango-db
+  csproxy-tango-db:
     image: registry.gitlab.com/tango-controls/docker/mysql:5
     environment:
      - MYSQL_ROOT_PASSWORD=root
@@ -32,18 +25,25 @@ services:
     environment:
      - ORB_PORT=10312
      - TANGO_HOST=localhost:10312
-     - MYSQL_HOST=mysql-2:3306
+     - MYSQL_HOST=csproxy-tango-db:3306
      - MYSQL_USER=tango
      - MYSQL_PASSWORD=tango
      - MYSQL_DATABASE=tango
     depends_on:
-     - mysql-2
+     - csproxy-tango-db
   # runs 'g-v-csproxy-0' tango device servers
   csproxy-ds:
     environment:
      - TANGO_HOST=g-v-csproxy-0:10312
     build:
-      context: csproxy-ds
+      context: common/csproxy-ds
+  micromax-ds:
+    environment:
+     - TANGO_HOST=tango-cs:10000
+    build:
+      context: micromax/device-servers
+    depends_on:
+     - tango-cs
   mxcube:
     ports:
      - "5000:5000"  # Dashboard
@@ -53,18 +53,18 @@ services:
     environment:
      - TANGO_HOST=tango-cs:10000
     build:
-      context: mxcube
+      context: micromax/mxcube
   b-micromax-md3-pc:
     build:
-      context: b-micromax-md3-pc
+      context: micromax/b-micromax-md3-pc
   b-micromax-isara-0:
     build:
-      context: b-micromax-isara-0
+      context: micromax/b-micromax-isara-0
   pandabox:
     build:
-      context: pandabox
+      context: micromax/pandabox
   dbg:
     environment:
      - TANGO_HOST=tango-cs:10000
     build:
-      context: dbg
+      context: micromax/dbg
