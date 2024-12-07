@@ -4,8 +4,10 @@ import numpy
 import struct
 from pathlib import Path
 from random import random
+from threading import Thread
 from tango.server import Device, attribute
 from simplejpeg import decode_jpeg
+
 
 CORNER_SIZE = 8
 
@@ -57,17 +59,33 @@ class MD3(Device):
         self._images = list(_load_images())
         self._frame_number = 0
 
+        #
+        # on the real device, the frame number is incremented continuously,
+        # as new frames arrive from the internal cameras
+        #
+        # emulate this with this dedicated frame number increment thread
+        #
+        Thread(target=self._increment_frame_number).start()
+
     def _get_image(self):
-        self._frame_number += 1
         image = self._images[self._frame_number % len(self._images)]
         # update frame number in the header
         image[8:16] = struct.pack(">q", self._frame_number)
 
         return image
 
+    def _increment_frame_number(self):
+        while True:
+            time.sleep(1 / 24)
+            self._frame_number += 1
+
     @attribute(dtype="DevEncoded", format="%d")
     def video_last_image(self):
         return "VIDEO_IMAGE", self._get_image()
+
+    @attribute(dtype="DevLong64")
+    def video_last_image_counter(self):
+        return self._frame_number
 
     @attribute(dtype="DevULong")
     def image_width(self):
