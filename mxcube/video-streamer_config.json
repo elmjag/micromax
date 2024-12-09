@@ -1,0 +1,11 @@
+{
+  "sources": {
+    "0.0.0.0:8000": {
+      "input_uri": "tango://b-micromax-md3-pc:9999/md/oav/bzoom#dbase=no",
+      "size": [1224, 1024],
+      "quality": 4,
+      "format": "MPEG1",
+      "hash": "md3video"
+    }
+  }
+}
