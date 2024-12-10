@@ -371,6 +371,8 @@ class MD3Up:
             self.write_attribute("CurrentPhase", "Unknown")
             await asyncio.sleep(PHASE_CHANGE_TIME_SEC)
             self.write_attribute("CurrentPhase", phase)
+            if phase == "DataCollection":
+                self.write_attribute("BeamstopPosition", "BEAM")
 
         if phase not in PHASES:
             # MD3 error message when unexpected phase specified
