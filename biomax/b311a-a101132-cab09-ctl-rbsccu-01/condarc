@@ -1,0 +1,4 @@
+channel_alias: https://conda.maxiv.lu.se/get
+channels:
+- maxiv-kits
+- mini-conda-forge

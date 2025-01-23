@@ -1,0 +1,29 @@
+#!/bin/bash
+#variables are indexing and cell
+
+LIST=file.list
+GEOMETRY=crystfel.geom
+file_size=1
+
+INTRADIUS=2,4,6
+MINPIXCOUNT=2
+MINPEAKS=4
+SNR=4
+BGRADIUS=3
+THRESHOLD=20
+
+split -a 3 -d -l $file_size ${LIST} ${LIST}.
+
+for file in ${LIST}.???
+         do
+sbatch --exclusive  --time=20:00:00 -J indexamajig -e indexamajig_%j.err <<EOF
+#!/bin/bash
+module purge
+module load gopresto PReSTO
+
+NPROC=$(grep proc /proc/cpuinfo | wc -l )
+
+indexamajig -j \$NPROC -i ${file} -g $GEOMETRY -o ${file}.stream ${indexing} ${cell} --peaks=peakfinder8 --min-pix-count=$MINPIXCOUNT --threshold=$THRESHOLD --int-radius=$INTRADIUS --min-snr=$SNR --min-peaks=$MINPEAKS --local-bg-radius=$BGRADIUS >  ${file}.log 2>&1
+EOF
+
+done

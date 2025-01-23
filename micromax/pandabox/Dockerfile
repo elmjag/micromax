@@ -7,18 +7,10 @@ RUN apt-get -y install \
     # for troubleshooting
     nano
 
-RUN micromamba install --name base --channel conda-forge \
-    python=3.10.12 \
-    circus=0.18.0
+COPY condarc /opt/conda/.condarc
 
-WORKDIR /
+RUN micromamba install --name base --channel maxiv-kits \
+    python=3.11.9 \
+    tangods-micromax-panda=1.4.0
 
-#
-# install the PandABox emulator used by trigger generator tango device tests
-#
-RUN git clone https://gitlab.maxiv.lu.se/kits-maxiv/dev-micromax-panda.git app && \
-    cd app && \
-    git checkout 1.0.0
-
-COPY circus.conf /etc/
-CMD [ "/opt/conda/bin/circusd", "/etc/circus.conf" ]
+CMD [ "/opt/conda/bin/micromax-pandabox-emulator" ]

@@ -8,7 +8,7 @@ RUN apt-get -y install \
     # to do the needful
     git \
     # for troubleshooting
-    procps tree iputils-ping nano
+    procps tree iputils-ping nano netcat-openbsd
 
 COPY activedirectory.yml /etc/sdm/
 
@@ -35,34 +35,24 @@ RUN micromamba install --name base --channel conda-forge \
     scifish=1.3.2
 
 #
-# install MicroMAX Dashboard
-#
-
-RUN micromamba create --name dashboard
-RUN micromamba install --name dashboard app-micromax-dashboard=0.3.0
-
-# add emulator specific dashboard configuration
-COPY dboard_config.py /opt/dashboard/config.py
-
-# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
-# ISPyB is accessible without proxy on white network.
-RUN cd /opt/conda/envs/dashboard/lib/python3.11/site-packages/dboard/static/micromax-templates && \
-    sed -i '/<proxy_address>http/d' lims.xml
-
-# generate initial MXCuBE configuration files
-RUN /opt/conda/envs/dashboard/bin/write_mxcube_config
-
-#
 # clone mxcube repositories
 #
 
 WORKDIR /app
+
+# clone 'configuration' repository on master branch
+RUN git clone --branch master https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
 
 # clone 'core' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
 # clone 'web' repository on maxiv-develop branch
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
+
+# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
+# ISPyB is accessible without proxy on white network.
+COPY no_lims_proxy.patch /tmp
+RUN cd conf && git apply /tmp/no_lims_proxy.patch
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core[maxiv]
@@ -88,34 +78,18 @@ COPY spg_pro_xtal_tab.txt /mxn/groups/sw/mxsw/mxcube_scripts/
 # install crystfel template files
 #
 RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
-COPY jungfrau_geom_temp.txt crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_scripts/template/
+COPY crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_scripts/template/
 
 #
-# Set-up micromax-service user,
-# which is used for running MXCuBE at the beamline.
+# install data files used by misc scan types
 #
-# NOTE: for now, the MXCuBE is run as 'root' user
-# in the emulator.
-#
-RUN addgroup micromax
-RUN adduser --system --no-create-home --ingroup micromax micromax-service
+RUN mkdir -p /mxn/groups/biomax/amptek/maxlab_macros/
+WORKDIR /mxn/groups/biomax/amptek/maxlab_macros
 
-#
-# Add a couple of proposal user groups.
-# This is needed to emulate creation of proposal directories in
-# /data/visitors/micromax folder.
-#
-
-# the 'Test mxCuBe' proposal user group
-RUN addgroup --allow-bad-names 20230002-group
-# the 'TEST for checking data handling' proposal user group
-RUN addgroup --allow-bad-names 20170251-group
-
-#
-# Create /data/visitors/micromax folder.
-#
-RUN mkdir --parents --mode=g+s /data/visitors/micromax
-RUN chown micromax-service:micromax /data/visitors/micromax
+# some kind of data file for loaded by BIOMAXXRFSpectrum hardware object
+COPY energy_edges.dat .
+# some kind of data file for loaded by BIOMAXContinuousScan hardware object
+COPY remote-energy.dat .
 
 #
 # install convenience scripts for running MXCuBE from terminal
@@ -123,9 +97,6 @@ RUN chown micromax-service:micromax /data/visitors/micromax
 # start.sh - starts the front-end in developer mode
 #
 COPY run.sh start.sh /app/
-
-# MD3 front and back lights toggler script
-COPY md3_light.py /app/
 
 # install our circus 'plug-in'
 RUN mkdir /opt/circus
@@ -137,7 +108,7 @@ COPY circus.conf /etc/
 # allows us to run git commands when these folder
 # are bound to host folders in docker-compose.yml
 #
-RUN git config --global --add safe.directory /app/dboard
+RUN git config --global --add safe.directory /app/conf
 RUN git config --global --add safe.directory /app/web
 RUN git config --global --add safe.directory /app/core
 
