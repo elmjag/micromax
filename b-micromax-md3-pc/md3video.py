@@ -95,6 +95,21 @@ class MD3(Device):
     def image_height(self):
         return HEIGHT
 
+    #
+    # video_live attribute
+    #
+    video_live = attribute(dtype=bool)
+
+    @video_live.getter
+    def video_live_read(self):
+        return True
+
+    @video_live.setter
+    def video_live_write(self, _):
+        # we don't really emulate starting and stopping image stream,
+        # allow client to write this attribute, but ignore the written value
+        pass
+
 
 if __name__ == "__main__":
     MD3.run_server()
