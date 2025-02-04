@@ -65,7 +65,7 @@ RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcub
 RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
 
 RUN /opt/conda/bin/pip install -e web
-RUN /opt/conda/bin/pip install -e core
+RUN /opt/conda/bin/pip install -e core[maxiv]
 
 # build front-end
 WORKDIR /app/web/ui
