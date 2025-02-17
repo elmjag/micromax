@@ -41,10 +41,9 @@ VALUES ('Micromax/Door/01','Door_Micromax','Micromax','Door','01',0,'nada','nada
        ('expchan/albaem_ctrl_04/3',NULL,'expchan','albaem_ctrl_04','3',0,'nada','nada','AlbaEm/043',0,'AlbaEM','0',NULL,NULL,NULL),
        ('dserver/AlbaEm/043',NULL,'dserver','AlbaEm','043',0,'nada','nada','AlbaEm/043',0,'DServer','0',NULL,NULL,NULL),
        ('expchan/albaem_ctrl_04/2',NULL,'expchan','albaem_ctrl_04','2',0,'nada','nada','AlbaEm/042',0,'AlbaEM','0',NULL,NULL,NULL),
-       ('dserver/AlbaEm/042',NULL,'dserver','AlbaEm','042',0,'nada','nada','AlbaEm/042',0,'DServer','0',NULL,NULL,NULL);
-
-
-
+       ('dserver/AlbaEm/042',NULL,'dserver','AlbaEm','042',0,'nada','nada','AlbaEm/042',0,'DServer','0',NULL,NULL,NULL),
+       ('b312a-e11/las/lcu01',NULL,'b312a-e11','las','lcu01',0,'nada','nada','Ekspla/B312A',0,'Ekspla','0',NULL,NULL,NULL),
+       ('dserver/Ekspla/B312A',NULL,'dserver','Ekspla','B312A',0,'nada','nada','Ekspla/B312A',0,'DServer','0',NULL,NULL,NULL);
 
 
 INSERT INTO `property_attribute_device`
@@ -108,4 +107,5 @@ VALUES ('MacroServer/micromax/1','PoolNames','','','',1,'Pool_micromax_1','2023-
        ('b312a-e06/dia/tabled-01-zi','id','','','',1,'5','2024-05-28 14:09:38','2024-05-28 14:09:38',NULL),
        ('b312a-e06/dia/tabled-01-zo','axis','','','',1,'3','2024-05-28 14:10:09','2024-05-28 14:10:09',NULL),
        ('b312a-e06/dia/tabled-01-zo','ctrl_id','','','',1,'3','2024-05-28 14:10:09','2024-05-28 14:10:09',NULL),
-       ('b312a-e06/dia/tabled-01-zo','id','','','',1,'6','2024-05-28 14:10:09','2024-05-28 14:10:09',NULL);
+       ('b312a-e06/dia/tabled-01-zo','id','','','',1,'6','2024-05-28 14:10:09','2024-05-28 14:10:09',NULL),
+       ('b312a-e11/las/lcu01','origin','','','',1,'http://localhost:8081','2025-02-17 10:35:09','2025-02-17 10:35:09',NULL);
