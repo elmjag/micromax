@@ -59,6 +59,30 @@ INITIAL_EVENTS = [
 
 
 @dataclass
+class CoaxCamScale:
+    x: float
+    y: float
+
+
+COAX_CAM_SCALES = [
+    # zoom level 1
+    CoaxCamScale(x=0.0018851562499999997, y=0.0018851562499999997),
+    # zoom level 2
+    CoaxCamScale(x=0.0015743281249999996, y=0.0015743281249999996),
+    # zoom level 3
+    CoaxCamScale(x=0.0012289635416666664, y=0.0012289635416666664),
+    # zoom level 4
+    CoaxCamScale(x=0.000950012567708333, y=0.000950012567708333),
+    # zoom level 5
+    CoaxCamScale(x=0.00023299124062499998, y=0.00023299124062499998),
+    # zoom level 6
+    CoaxCamScale(x=0.00018080156250000008, y=0.00018080156250000008),
+    # zoom level 7
+    CoaxCamScale(x=0.00011700000000000001, y=0.00011700000000000001),
+]
+
+
+@dataclass
 class Attribute:
     val: Any
     type: str
@@ -180,7 +204,7 @@ class SynchronizedWriter:
 
 class MD3Up:
     def __init__(self):
-        self._attr_updated_callbacks = set()
+        self._attr_updated_callbacks: set[AttributeUpdatedCallback] = set()
         self._synchronization_id = 0
         self._tasks = {}
 
@@ -344,6 +368,28 @@ class MD3Up:
             ),
         }
 
+        # add an internal attributes watcher, to deal with zoom changes
+        self.add_attribute_updated_callback(self._attribute_updated)
+
+    def _attribute_updated(self, name: str, attr: Any, timestamp: int):
+        """
+        This callback watches for zoom level changes and updates camera scale attributes.
+        """
+        if name != "CoaxialCameraZoomValue":
+            # we only care about CoaxialCameraZoomValue, aka zoom level changes
+            return
+
+        #
+        # Here we know that it's the CoaxialCameraZoomValue attribute changed.
+        # Update the CoaxCamScale attributes to match new zoom level.
+        #
+
+        zoom_level = attr.val
+        coax_cam_scale = COAX_CAM_SCALES[zoom_level - 1]
+
+        self.write_attribute("CoaxCamScaleX", coax_cam_scale.x, timestamp)
+        self.write_attribute("CoaxCamScaleY", coax_cam_scale.y, timestamp)
+
     def _add_task(self, name: str, running_time: float):
         def get_synchronization_id():
             self._synchronization_id += 1
@@ -506,8 +552,12 @@ class MD3Up:
 
         return attr
 
-    def write_attribute(self, attribute_name: str, attribute_value):
-        timestamp = int(time())
+    def write_attribute(
+        self, attribute_name: str, attribute_value, timestamp: None | int = None
+    ):
+        if timestamp is None:
+            timestamp = int(time())
+
         attr = self.get_attribute(attribute_name)
         attr.val = attribute_value
 
