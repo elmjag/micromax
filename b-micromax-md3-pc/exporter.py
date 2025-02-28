@@ -113,6 +113,13 @@ class Task:
         return self.end_time > time()
 
 
+@dataclass
+class MovedMotor:
+    name: str
+    start_pos: float
+    end_pos: float
+
+
 AttributeUpdatedCallback = Callable[[str, Attribute, int], None]
 
 
@@ -207,6 +214,11 @@ def epoch_as_text(epoch: float) -> str:
     # cut of last 3 digit, so that seconds are returned with milliseconds precision,
     # e.g '2023-12-12 15:44:15.695130' becomes '2023-12-12 15:44:15.695'
     return txt[:-3]
+
+
+def _wrap_omega_position(new_omega_position: float) -> float:
+    """Keep Omega rotation angle within 0..360 range"""
+    return new_omega_position % 360.0
 
 
 class SynchronizedWriter:
@@ -505,18 +517,135 @@ class MD3Up:
     ) -> int:
         return self._add_task("Start RASTER SCAN", 5.2)
 
+    async def _move_motors_simultaneously(
+        self, motors: list[MovedMotor], move_duration: float
+    ):
+        """Moves all motors simultaneously.
+
+        Args:
+            motors: list of motors to move
+            move_duration: time it takes to move all motors (in seconds)
+        """
+
+        for motor in motors:
+            state_attr = f"{motor.name}State"
+            self.write_attribute(state_attr, "Moving")
+
+        for _ in range(MOTOR_STEPS):
+            for motor in motors:
+                pos_attr = f"{motor.name}Position"
+                current_pos = self._attrs[pos_attr].val
+                step = (motor.end_pos - motor.start_pos) / MOTOR_STEPS
+                new_pos = current_pos + step
+                if motor.name == "Omega":
+                    new_pos = _wrap_omega_position(new_pos)
+                self.write_attribute(pos_attr, new_pos)
+
+            await asyncio.sleep(move_duration / MOTOR_STEPS)
+
+        for motor in motors:
+            state_attr = f"{motor.name}State"
+            self.write_attribute(state_attr, "Ready")
+
     def _do_start_scan_ex(
         self,
         _frame_id,
-        _start_angle,
-        _scan_range,
-        _exposure_time,
+        start_angle,
+        scan_range,
+        exposure_time,
         _number_of_passes,
     ) -> int:
-        return self._add_task("Start SCAN", 3.2)
 
-    def _do_start_scan_4d_ex(self, *_):
-        return self._add_task("Start 4D-SCAN", 3.2)
+        # In MD3 exposure time dictates how long scan will take.
+        # In reality, the task would take longer, because we need to first move omega to `start_angle` position.
+        # Here it's simplified; the exposure time is whole task duration, and it takes same time to move, as for scan.
+        move_time = float(exposure_time) / 2
+
+        async def start_scan():
+            self.write_attribute("FastShutterIsOpen", True)
+
+            start_omega = _wrap_omega_position(float(start_angle))
+            stop_omega = _wrap_omega_position(start_omega + float(scan_range))
+
+            await self._move_motors_simultaneously(
+                [
+                    MovedMotor(
+                        name="Omega",
+                        start_pos=self._attrs["OmegaPosition"].val,
+                        end_pos=start_omega,
+                    )
+                ],
+                move_time,
+            )
+            await self._move_motors_simultaneously(
+                [MovedMotor(name="Omega", start_pos=start_omega, end_pos=stop_omega)],
+                move_time,
+            )
+            self.write_attribute("FastShutterIsOpen", False)
+
+        asyncio.create_task(start_scan())
+        return self._add_task("Start SCAN", float(exposure_time))
+
+    def _do_start_scan_4d_ex(
+        self,
+        start_angle: str,
+        scan_range: str,
+        exposure_time: str,
+        start_y: str,
+        start_z: str,
+        start_cx: str,
+        start_cy: str,
+        stop_y: str,
+        stop_z: str,
+        stop_cx: str,
+        stop_cy: str,
+    ):
+
+        # Time it takes to move to `start_angle` omega position.
+        # Set as 1/6 of exposure time (which will act as task duration, like in self._do_start_scan_ex),
+        # so that each motor move takes equal duration.
+        move_time = float(exposure_time) / 6
+
+        # Figure out omegas start and stop angles, in 0..360 range.
+        start_omega = _wrap_omega_position(float(start_angle))
+        stop_omega = _wrap_omega_position(start_omega + float(scan_range))
+
+        async def start_4d_scan():
+            await self._move_motors_simultaneously(
+                [
+                    MovedMotor(
+                        name="Omega",
+                        start_pos=self._attrs["OmegaPosition"].val,
+                        end_pos=start_omega,
+                    )
+                ],
+                move_time,
+            )
+
+            motors_to_move = [
+                MovedMotor(name="Omega", start_pos=start_omega, end_pos=stop_omega),
+                MovedMotor(
+                    name="AlignmentY", start_pos=float(start_y), end_pos=float(stop_y)
+                ),
+                MovedMotor(
+                    name="AlignmentZ", start_pos=float(start_z), end_pos=float(stop_z)
+                ),
+                MovedMotor(
+                    name="CentringX", start_pos=float(start_cx), end_pos=float(stop_cx)
+                ),
+                MovedMotor(
+                    name="CentringY", start_pos=float(start_cy), end_pos=float(stop_cy)
+                ),
+            ]
+
+            self.write_attribute("FastShutterIsOpen", True)
+
+            await self._move_motors_simultaneously(motors_to_move, 5 * move_time)
+
+            self.write_attribute("FastShutterIsOpen", False)
+
+        asyncio.create_task(start_4d_scan())
+        return self._add_task("Start 4D-SCAN", float(exposure_time))
 
     def _do_is_task_running(self, task_id) -> bool:
         task = self._get_task(task_id)
@@ -643,6 +772,7 @@ class MD3Up:
     def exec_command(self, command_name, command_args):
         cmd = self._commands.get(command_name)
         if cmd is None:
+            log(f"ERROR: unknown command: {command_name}")
             raise UnknownCommand()
 
         _, _, cmd_method = cmd
@@ -706,7 +836,7 @@ class Exporter:
             # Omega is a rotation angle motor, thus a special case.
             # MD3 automatically wraps any set value within 0..360 degrees range.
             if motor_name == "Omega":
-                step_pos = step_pos % 360.0
+                step_pos = _wrap_omega_position(step_pos)
 
             self._md3.write_attribute(motor_pos_attr, step_pos)
             await asyncio.sleep(2 / MOTOR_STEPS)
