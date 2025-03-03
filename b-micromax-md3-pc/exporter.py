@@ -444,15 +444,74 @@ class MD3Up:
     def _do_start_scan_ex(
         self,
         _frame_id,
-        _start_angle,
-        _scan_range,
+        start_angle,
+        scan_range,
         _exposure_time,
         _number_of_passes,
     ) -> int:
-        return self._add_task("Start SCAN", 3.2)
+        TASK_DURATION = 3.2 
+        async def start_scan():
+            self.write_attribute("FastShutterIsOpen", True)
+            state_attr = "OmegaState"
+            pos_attr = "OmegaPosition"
+            step_size = float(scan_range) / MOTOR_STEPS
+            self.write_attribute(state_attr, "Moving")
+            for _ in range(MOTOR_STEPS):
+                current_pos = self._attrs[pos_attr].val
+                log(f"INFO: {current_pos=} for {pos_attr=}, will move by {step_size=}")
+                self.write_attribute(pos_attr, current_pos + step_size)
+                await asyncio.sleep(TASK_DURATION / MOTOR_STEPS)
+            self.write_attribute(state_attr, "Ready")
+            self.write_attribute("FastShutterIsOpen", False)
 
-    def _do_start_scan_4d_ex(self, *_):
-        return self._add_task("Start 4D-SCAN", 3.2)
+        asyncio.create_task(start_scan())
+        return self._add_task("Start SCAN", TASK_DURATION)
+
+
+    def _do_start_scan_4d_ex(self,
+        start_angle,
+        scan_range,
+        _exposure_time,
+        start_y,
+        start_z,
+        start_cx,
+        start_cy,
+        stop_y,
+        stop_z,
+        stop_cx,
+        stop_cy,
+    ):
+        TASK_DURATION = 3.2 
+        async def start_4d_scan():
+            step_sizes = {
+                "Omega": float(scan_range) / MOTOR_STEPS,
+                "AlignmentY": (float(stop_y) - float(start_y)) / MOTOR_STEPS,
+                "AlignmentZ": (float(stop_z) - float(start_z)) / MOTOR_STEPS,
+                "CentringX": (float(stop_cx) - float(start_cx)) / MOTOR_STEPS,
+                "CentringY": (float(stop_cy) - float(start_cy)) / MOTOR_STEPS,
+            }
+
+            self.write_attribute("FastShutterIsOpen", True)
+            
+            for motor_name in step_sizes.keys():
+                state_attr = motor_name + "State"
+                self.write_attribute(state_attr, "Moving")
+            for _ in range(MOTOR_STEPS):
+                for motor_name, step in step_sizes.items():
+                    pos_attr = motor_name + "Position"
+                    current_pos = self._attrs[pos_attr].val
+                    log(f"INFO: {current_pos=} for {motor_name=}, will move by {step=}")
+                    self.write_attribute(pos_attr, current_pos + step)
+                    await asyncio.sleep(TASK_DURATION / MOTOR_STEPS)
+                    
+            for motor_name in step_sizes.keys():
+                state_attr = motor_name + "State"
+                self.write_attribute(state_attr, "Ready")
+
+            self.write_attribute("FastShutterIsOpen", False)
+                
+        asyncio.create_task(start_4d_scan())
+        return self._add_task("Start 4D-SCAN", TASK_DURATION)
 
     def _do_is_task_running(self, task_id) -> bool:
         task = self._get_task(task_id)
@@ -573,6 +632,7 @@ class MD3Up:
     def exec_command(self, command_name, command_args):
         cmd = self._commands.get(command_name)
         if cmd is None:
+            log(f"ERROR: unknown command: {command_name}")
             raise UnknownCommand()
 
         _, _, cmd_method = cmd
