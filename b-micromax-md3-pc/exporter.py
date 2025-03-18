@@ -274,6 +274,7 @@ class MD3Up:
             ),
             "DetectorDistance": Attribute(700.0, DOUBLE),
             "DetectorState": Attribute("Ready", STATE),
+            "DirectBeamEnabled": Attribute(False, BOOLEAN),
             "FastShutterIsOpen": Attribute(False, BOOLEAN),
             "FrontLightFactor": Attribute(0.9, DOUBLE),
             "FrontLightIsOn": Attribute(False, BOOLEAN),
