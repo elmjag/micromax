@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from typing import Optional, Any, Callable
+from typing import Optional, Any
+from collections.abc import Callable
 import asyncio
 import sys
 import math
@@ -8,7 +9,7 @@ from time import time
 from asyncio import StreamReader, StreamWriter, Lock
 from datetime import datetime
 from atcpserv import AsyncTCPServer
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MOTOR_STEPS = 8
 PORT = 9001
@@ -84,8 +85,21 @@ COAX_CAM_SCALES = [
 
 @dataclass
 class Attribute:
-    val: Any
+    _val: Any
     type: str
+
+    # This callback function is meant to provide a way to validate and/or modify the new value before it's set.
+    value_transform: Callable[[Any], Any] = field(
+        default=lambda val: val
+    )  # identity function by default
+
+    @property
+    def val(self):
+        return self._val
+
+    @val.setter
+    def val(self, val: Any):
+        self._val = self.value_transform(val)
 
 
 @dataclass
@@ -112,6 +126,10 @@ class UnknownCommand(Exception):
 
 class CommandError(Exception):
     pass
+
+
+class DisallowedState(Exception):
+    """Exception for cases where a command or attribute is invoked, although it is not allowed in the current state."""
 
 
 def log(msg: str):
@@ -241,7 +259,9 @@ class MD3Up:
             "BackLightIsOn": Attribute(False, BOOLEAN),
             "BeamstopDistancePosition": Attribute(6.863187356482003, DOUBLE),
             # note: the BeamstopPosition type signature is a guess
-            "BeamstopPosition": Attribute("PARK", "org.embl.md.dev.Beamstop$Position"),
+            "BeamstopPosition": Attribute(
+                "PARK", "org.embl.md.dev.Beamstop$Position", self._move_beamstop_check
+            ),
             "BeamstopXPosition": Attribute(6.93, DOUBLE),
             "BeamstopXState": Attribute("Ready", STATE),
             "BeamstopYPosition": Attribute(4.75, DOUBLE),
@@ -274,7 +294,10 @@ class MD3Up:
             ),
             "DetectorDistance": Attribute(700.0, DOUBLE),
             "DetectorState": Attribute("Ready", STATE),
-            "FastShutterIsOpen": Attribute(False, BOOLEAN),
+            "DirectBeamEnabled": Attribute(False, BOOLEAN),
+            "FastShutterIsOpen": Attribute(
+                False, BOOLEAN, self._fast_shutter_direct_beam_check
+            ),
             "FrontLightFactor": Attribute(0.9, DOUBLE),
             "FrontLightIsOn": Attribute(False, BOOLEAN),
             # note: the HeadType type signature is a guess
@@ -390,6 +413,47 @@ class MD3Up:
         self.write_attribute("CoaxCamScaleX", coax_cam_scale.x, timestamp)
         self.write_attribute("CoaxCamScaleY", coax_cam_scale.y, timestamp)
 
+    def _fast_shutter_direct_beam_check(self, new_value: bool):
+        """Checks for a situation when an attempt is made to open fast shutter, with beamstop out of BEAM position.
+
+        Args:
+            new_value: new value for fastShutterIsOpen attribute
+
+        Raises:
+            DisallowedState: When opening fast shutter could lead to direct beam on the detector.
+
+        Returns:
+            new value for fastShutterIsOpen attribute. Here it's always the same as the input value.
+        """
+        direct_beam_enabled = self._attrs["DirectBeamEnabled"].val
+        beamstop_position = self._attrs["BeamstopPosition"].val
+
+        if not direct_beam_enabled and new_value and beamstop_position != "BEAM":
+            raise DisallowedState("Cannot change value to: true")
+
+        return new_value
+
+    def _move_beamstop_check(self, new_position: str):
+        """Checks for an attempt of moving beamstop when fast shutter is open and direct beam is not allowed.
+
+        Args:
+            new_position: New position for the beamstop.
+
+        Raises:
+            DisallowedState: Thrown when moving beamstop could lead to direct beam on the detector.
+
+        Returns:
+            new position for the beamstop. Here it's always the same as the input.
+        """
+        direct_beam_enabled = self._attrs["DirectBeamEnabled"].val
+        fast_shutter_is_open = self._attrs["FastShutterIsOpen"].val
+
+        if not direct_beam_enabled and fast_shutter_is_open:
+            # This is error message MD3UP generates when beamstop is moved while fast shutter is open.
+            raise DisallowedState("Invalid value")
+
+        return new_position
+
     def _add_task(self, name: str, running_time: float):
         def get_synchronization_id():
             self._synchronization_id += 1
@@ -491,6 +555,12 @@ class MD3Up:
         return self._attrs["BeamstopPosition"].val
 
     def _do_set_beamstop_position(self, position):
+
+        # Performs a check if moving beamstop could lead to direct beam hitting the detector.
+        # It is already present in the setter of BeamstopPosition attribute, but it makes things
+        # easier by calling it also there, as the setting of attribute occurs inside a task.
+        self._move_beamstop_check(position)
+
         async def update_beamstop_pos():
             self.write_attribute("BeamstopPosition", "UNKNOWN")
             await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
@@ -658,12 +728,15 @@ class Exporter:
         val = parse_val(attr_type, val)
 
         motor_name = self._md3.get_motor_name(name)
-        if motor_name is None:
-            # write non-motor attribute
-            self._md3.write_attribute(name, val)
-        else:
-            # this is a motor position attribute, emulate moving motor
-            asyncio.create_task(self._move_motor(writer, motor_name, val))
+        try:
+            if motor_name is None:
+                # write non-motor attribute
+                self._md3.write_attribute(name, val)
+            else:
+                # this is a motor position attribute, emulate moving motor
+                asyncio.create_task(self._move_motor(writer, motor_name, val))
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
 
         return "NULL"
 
@@ -679,6 +752,8 @@ class Exporter:
             ret = self._md3.exec_command(cmd_name, args)
         except CommandError as cmd_err:
             return f"ERR:{str(cmd_err)}"
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
 
         return f"RET:{encode_val(ret)}"
 
