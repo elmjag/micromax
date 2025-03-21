@@ -422,7 +422,7 @@ class MD3Up:
         direct_beam_enabled = self._attrs["DirectBeamEnabled"].val
         beamstop_position = self._attrs["BeamstopPosition"].val
         if not direct_beam_enabled and new_value and beamstop_position != "BEAM":
-            raise DisallowedState("Cannot open fast shutter: beamstop is not in BEAM position and direct beam is not allowed!")
+            raise DisallowedState("Cannot change value to: true")
         return new_value
 
     def _move_beamstop_check(self, new_position: str):
@@ -441,7 +441,9 @@ class MD3Up:
         fast_shutter_is_open = self._attrs["FastShutterIsOpen"].val
 
         if not direct_beam_enabled and fast_shutter_is_open:
-            raise DisallowedState("Cannot move beamstop. Direct beam is not allowed, and fast shutter is open!")
+            # This is error message MD3UP generates when beamstop is moved while fast shutter is open.
+            raise DisallowedState("Invalid value")
+
         return new_position
 
     def _add_task(self, name: str, running_time: float):
@@ -545,6 +547,11 @@ class MD3Up:
         return self._attrs["BeamstopPosition"].val
 
     def _do_set_beamstop_position(self, position):
+        
+        # Performs a check if moving beamstop could lead to direct beam hitting the detector.
+        # It is already present in the setter of BeamstopPosition attribute, but it makes things 
+        # easier by calling it also there, as the setting of attribute occurs inside a task.
+        self._move_beamstop_check(position)
 
         async def update_beamstop_pos():
             self.write_attribute("BeamstopPosition", "UNKNOWN")
@@ -713,13 +720,15 @@ class Exporter:
         val = parse_val(attr_type, val)
 
         motor_name = self._md3.get_motor_name(name)
-        if motor_name is None:
-            # write non-motor attribute
-            self._md3.write_attribute(name, val)
-        else:
-            # this is a motor position attribute, emulate moving motor
-            asyncio.create_task(self._move_motor(writer, motor_name, val))
-
+        try:
+            if motor_name is None:
+                # write non-motor attribute
+                self._md3.write_attribute(name, val)
+            else:
+                # this is a motor position attribute, emulate moving motor
+                asyncio.create_task(self._move_motor(writer, motor_name, val))
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
         return "NULL"
 
     def _handle_exec(self, command: str) -> str:
@@ -734,6 +743,8 @@ class Exporter:
             ret = self._md3.exec_command(cmd_name, args)
         except CommandError as cmd_err:
             return f"ERR:{str(cmd_err)}"
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
 
         return f"RET:{encode_val(ret)}"
 
