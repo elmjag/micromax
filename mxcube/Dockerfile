@@ -92,6 +92,33 @@ RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
 COPY jungfrau_geom_temp.txt crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_scripts/template/
 
 #
+# Set-up micromax-service user,
+# which is used for running MXCuBE at the beamline.
+#
+# NOTE: for now, the MXCuBE is run as 'root' user
+# in the emulator.
+#
+RUN addgroup micromax
+RUN adduser --system --no-create-home --ingroup micromax micromax-service
+
+#
+# Add a couple of proposal user groups.
+# This is needed to emulate creation of proposal directories in
+# /data/visitors/micromax folder.
+#
+
+# the 'Test mxCuBe' proposal user group
+RUN addgroup --allow-bad-names 20230002-group
+# the 'TEST for checking data handling' proposal user group
+RUN addgroup --allow-bad-names 20170251-group
+
+#
+# Create /data/visitors/micromax folder.
+#
+RUN mkdir --parents --mode=g+s /data/visitors/micromax
+RUN chown micromax-service:micromax /data/visitors/micromax
+
+#
 # install convenience scripts for running MXCuBE from terminal
 # run.sh   - runs the python backend (mxcubeweb-server)
 # start.sh - starts the front-end in developer mode
