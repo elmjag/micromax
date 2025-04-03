@@ -30,7 +30,8 @@ services:
   g-v-csproxy-0:
     image: registry.gitlab.com/tango-controls/docker/tango-cs:9.3.5
     environment:
-     - TANGO_HOST=localhost:10000
+     - ORB_PORT=10312
+     - TANGO_HOST=localhost:10312
      - MYSQL_HOST=mysql-2:3306
      - MYSQL_USER=tango
      - MYSQL_PASSWORD=tango
@@ -40,7 +41,7 @@ services:
   # runs 'g-v-csproxy-0' tango device servers
   csproxy-ds:
     environment:
-     - TANGO_HOST=g-v-csproxy-0:10000
+     - TANGO_HOST=g-v-csproxy-0:10312
     build:
       context: csproxy-ds
   mxcube:
