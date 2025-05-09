@@ -1,7 +1,10 @@
 services:
   tango-db:
     environment:
-     - MYSQL_ROOT_PASSWORD=root
+     - MARIADB_ROOT_PASSWORD=root
+     - MARIADB_DATABASE=tango
+     - MARIADB_USER=tango
+     - MARIADB_PASSWORD=tango
     build:
       context: micromax/tango-db
   tango-cs:
@@ -17,9 +20,12 @@ services:
     depends_on:
      - tango-db
   csproxy-tango-db:
-    image: registry.gitlab.com/tango-controls/docker/mysql:5
+    image: artefact.skao.int/ska-tango-images-tango-db:11.0.2
     environment:
-     - MYSQL_ROOT_PASSWORD=root
+     - MARIADB_ROOT_PASSWORD=root
+     - MARIADB_DATABASE=tango
+     - MARIADB_USER=tango
+     - MARIADB_PASSWORD=tango
   g-v-csproxy-0:
     image: registry.gitlab.com/tango-controls/docker/tango-cs:9.3.5
     environment:
