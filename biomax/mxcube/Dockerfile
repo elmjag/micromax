@@ -41,13 +41,13 @@ RUN micromamba install --name base --channel conda-forge \
 WORKDIR /app
 
 # clone 'configuration' repository on master branch
-RUN git clone --branch master https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
+RUN git clone --depth 8 --branch master https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/cfg-maxiv-mxcubecore.git conf
 
 # clone 'core' repository on maxiv-develop branch
-RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
+RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcubecore.git core
 
 # clone 'web' repository on maxiv-develop branch
-RUN git clone --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
+RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
 
 # remove web proxy from ISPyB configuration, to avoid emulating web proxy.
 # ISPyB is accessible without proxy on white network.
