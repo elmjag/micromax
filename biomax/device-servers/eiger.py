@@ -147,7 +147,7 @@ class Eiger(Device):
     def rate_correction_enabled(self):
         return False
 
-    @attribute(name="BitDepth", dtype=int)
+    @attribute(name="BitDepthImage", dtype=int)
     def bit_depth(self):
         return 16
 
