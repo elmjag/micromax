@@ -43,7 +43,10 @@ VALUES ('Micromax/Door/01','Door_Micromax','Micromax','Door','01',0,'nada','nada
        ('expchan/albaem_ctrl_04/2',NULL,'expchan','albaem_ctrl_04','2',0,'nada','nada','AlbaEm/042',0,'AlbaEM','0',NULL,NULL,NULL),
        ('dserver/AlbaEm/042',NULL,'dserver','AlbaEm','042',0,'nada','nada','AlbaEm/042',0,'DServer','0',NULL,NULL,NULL),
        ('b312a-e11/las/lcu01',NULL,'b312a-e11','las','lcu01',0,'nada','nada','Ekspla/B312A',0,'Ekspla','0',NULL,NULL,NULL),
-       ('dserver/Ekspla/B312A',NULL,'dserver','Ekspla','B312A',0,'nada','nada','Ekspla/B312A',0,'DServer','0',NULL,NULL,NULL);
+       ('dserver/Ekspla/B312A',NULL,'dserver','Ekspla','B312A',0,'nada','nada','Ekspla/B312A',0,'DServer','0',NULL,NULL,NULL),
+       ('b312-e/ctl/tfw-01',NULL,'b312-e','ctl','tfw-01',0,'nada','nada','ThorlabsFilterWheel/B312A',0,'ThorlabsFilterWheel','0',NULL,NULL,NULL),
+       ('dserver/ThorlabsFilterWheel/B312A',NULL,'dserver','ThorlabsFilterWheel','B312A',0,'nada','nada','ThorlabsFilterWheel/B312A',0,'DServer','0',NULL,NULL,NULL);
+
 
 
 INSERT INTO `property_attribute_device`
