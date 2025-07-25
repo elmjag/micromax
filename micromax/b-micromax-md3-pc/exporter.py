@@ -379,6 +379,12 @@ class MD3Up:
                 "double, double, double, double, double, double, double, double, double, double, double",
                 self._do_start_scan_4d_ex,
             ),
+            # long startSimultaneousMoveMotors(String)
+            "startSimultaneousMoveMotors": (
+                "long",
+                "String",
+                self._do_start_simultaneous_move_motors,
+            ),
             # boolean isTaskRunning(int)
             "isTaskRunning": ("boolean", "int", self._do_is_task_running),
             # String[] getTaskInfo(int)
@@ -518,7 +524,8 @@ class MD3Up:
         return self._add_task("Start RASTER SCAN", 5.2)
 
     async def _move_motors_simultaneously(
-        self, motors: list[MovedMotor], move_duration: float
+        self, motors: list[MovedMotor],
+        move_duration: float
     ):
         """Moves all motors simultaneously.
 
@@ -546,6 +553,37 @@ class MD3Up:
         for motor in motors:
             state_attr = f"{motor.name}State"
             self.write_attribute(state_attr, "Ready")
+
+    def _do_start_simultaneous_move_motors(
+        self,
+        motors_str: str
+    ) -> int:
+        """Start a task to move motors simultaneously.
+
+        Args:
+            motors_str: List of motor names and their target positions,
+                        formatted as "Motor1=Val1;Motor2=Val2;..."
+
+        Returns:
+            int: Task ID for the move operation.
+        """
+        motors = []
+        for motor_str in motors_str.split(";"):
+            if '=' not in motor_str:
+                continue
+            name, pos_str = motor_str.split("=")
+            pos = float(pos_str)
+            if name not in self._motors:
+                raise CommandError(f"Unknown motor: {name}")
+            start_pos = self._attrs[f"{name}Position"].val
+            motors.append(MovedMotor(name=name, start_pos=start_pos, end_pos=pos))
+
+        move_duration = 2.0
+        asyncio.create_task(
+            self._move_motors_simultaneously(motors, move_duration),
+        )
+        return self._add_task("Start Simultaneous Move Motors", move_duration)
+
 
     def _do_start_scan_ex(
         self,
