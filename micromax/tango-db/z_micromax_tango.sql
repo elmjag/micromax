@@ -45,7 +45,15 @@ VALUES ('Micromax/Door/01','Door_Micromax','Micromax','Door','01',0,'nada','nada
        ('b312a-e11/las/lcu01',NULL,'b312a-e11','las','lcu01',0,'nada','nada','Ekspla/B312A',0,'Ekspla','0',NULL,NULL,NULL),
        ('dserver/Ekspla/B312A',NULL,'dserver','Ekspla','B312A',0,'nada','nada','Ekspla/B312A',0,'DServer','0',NULL,NULL,NULL),
        ('b312-e/ctl/tfw-01',NULL,'b312-e','ctl','tfw-01',0,'nada','nada','ThorlabsFilterWheel/B312A',0,'ThorlabsFilterWheel','0',NULL,NULL,NULL),
-       ('dserver/ThorlabsFilterWheel/B312A',NULL,'dserver','ThorlabsFilterWheel','B312A',0,'nada','nada','ThorlabsFilterWheel/B312A',0,'DServer','0',NULL,NULL,NULL);
+       ('dserver/ThorlabsFilterWheel/B312A',NULL,'dserver','ThorlabsFilterWheel','B312A',0,'nada','nada','ThorlabsFilterWheel/B312A',0,'DServer','0',NULL,NULL,NULL),
+       ('b312a-o06/dia/xbpm-01',NULL,'b312a-o06','dia','xbpm-01',0,'nada','nada','BeamlineXbpm/B312A-O06',0,'BeamlineXbpm','0',NULL,NULL,NULL),
+       ('dserver/BeamlineXbpm/B312A-O06',NULL,'dserver','BeamlineXbpm','B312A-O06',0,'nada','nada','BeamlineXbpm/B312A-O06',0,'DServer','0',NULL,NULL,NULL),
+       ('b312a-e01/dia/xbpm-01',NULL,'b312a-e01','dia','xbpm-01',0,'nada','nada','BeamlineXbpm/B312A-E01',0,'BeamlineXbpm','0',NULL,NULL,NULL),
+       ('dserver/BeamlineXbpm/B312A-E01',NULL,'dserver','BeamlineXbpm','B312A-E01',0,'nada','nada','BeamlineXbpm/B312A-E01',0,'DServer','0',NULL,NULL,NULL),
+       ('b312a-e04/dia/xbpm-01',NULL,'b312a-e04','dia','xbpm-01',0,'nada','nada','BeamlineXbpm/B312A-E04-1',0,'BeamlineXbpm','0',NULL,NULL,NULL),
+       ('dserver/BeamlineXbpm/B312A-E04-1',NULL,'dserver','BeamlineXbpm','B312A-E04-1',0,'nada','nada','BeamlineXbpm/B312A-E04-1',0,'DServer','0',NULL,NULL,NULL),
+       ('b312a-e04/dia/xbpm-02',NULL,'b312a-e04','dia','xbpm-02',0,'nada','nada','BeamlineXbpm/B312A-E04-2',0,'BeamlineXbpm','0',NULL,NULL,NULL),
+       ('dserver/BeamlineXbpm/B312A-E04-2',NULL,'dserver','BeamlineXbpm','B312A-E04-2',0,'nada','nada','BeamlineXbpm/B312A-E04-2',0,'DServer','0',NULL,NULL,NULL);
 
 
 
