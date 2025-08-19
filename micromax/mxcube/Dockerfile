@@ -39,7 +39,7 @@ RUN micromamba install --name base --channel conda-forge \
 #
 
 RUN micromamba create --name dashboard
-RUN micromamba install --name dashboard app-micromax-dashboard=0.5.0
+RUN micromamba install --name dashboard app-micromax-dashboard=0.6.0
 
 # add emulator specific dashboard configuration
 COPY dboard_config.py /opt/dashboard/config.py
@@ -54,7 +54,7 @@ COPY dboard_config.py /opt/dashboard/config.py
 #
 RUN cd /opt/conda/envs/dashboard/lib/python3.11/site-packages/dboard/static/micromax-templates && \
     sed -i '/proxy_address/d' lims.yaml && \
-    sed -i 's/scicat_enabled: true/scicat_enabled: false/' collect.yaml
+    sed -i 's/scicat_enabled: true/scicat_enabled: false/' collect.yaml-template
 
 # generate initial MXCuBE configuration files
 RUN /opt/conda/envs/dashboard/bin/write_mxcube_config
