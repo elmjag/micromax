@@ -35,6 +35,7 @@ VALUES ('motor/faux_ctrl/1','StartPosition','__value',1,'550','2025-01-22 11:18:
 INSERT INTO `property_device`
 VALUES ('MacroServer/biomax/1','PoolNames','','','',1,'Pool_biomax_1','2025-01-22 10:15:13','2025-01-22 10:15:13',NULL),
        ('pool/biomax/1','PoolPath','','','',1,'/sardana_ctrls','2025-01-22 11:00:48','2025-01-22 11:00:48',NULL),
+       ('MacroServer/biomax/1','MacroPath','','','',1,'/sardana_macro','2025-06-30 14:45:50','2025-06-30 14:45:50',NULL),
        ('controller/fauxmotorcontroller/faux_ctrl','type','','','',1,'Motor','2025-01-22 11:17:58','2025-01-22 11:17:58',NULL),
        ('controller/fauxmotorcontroller/faux_ctrl','library','','','',1,'faux.py','2025-01-22 11:17:58','2025-01-22 11:17:58',NULL),
        ('controller/fauxmotorcontroller/faux_ctrl','klass','','','',1,'FauxMotorController','2025-01-22 11:17:58','2025-01-22 11:17:58',NULL),

@@ -30,4 +30,7 @@ COPY beam_shutter.py eiger.py mlid.py xbpm.py /tangods/
 RUN mkdir /sardana_ctrls
 COPY faux.py /sardana_ctrls/
 
+RUN mkdir /sardana_macro
+COPY calc_flux.py /sardana_macro/
+
 CMD [ "/opt/conda/bin/circusd", "/etc/circus.conf" ]
