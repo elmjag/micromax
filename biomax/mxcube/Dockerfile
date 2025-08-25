@@ -49,10 +49,17 @@ RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-m
 # clone 'web' repository on maxiv-develop branch
 RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
 
-# remove web proxy from ISPyB configuration, to avoid emulating web proxy.
+#
+# Patch a bit config files.
+#
+# Remove web proxy from ISPyB configuration, to avoid emulating web proxy.
 # ISPyB is accessible without proxy on white network.
-COPY no_lims_proxy.patch /tmp
-RUN cd conf && git apply /tmp/no_lims_proxy.patch
+#
+# Disable uploads to SciCat, avoid uploading data when running in the emulator.
+#
+RUN cd /app/conf/BioMAX && \
+    sed -i '/proxy_address/d' lims.yaml && \
+    sed -i 's/scicat_enabled: true/scicat_enabled: false/' collect.yaml
 
 RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core[maxiv]
