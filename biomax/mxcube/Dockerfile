@@ -99,6 +99,33 @@ COPY energy_edges.dat .
 COPY remote-energy.dat .
 
 #
+# Set-up biomax-service user,
+# which is used for running MXCuBE at the beamline.
+#
+# NOTE: for now, the MXCuBE is run as 'root' user
+# in the emulator.
+#
+RUN addgroup biomax
+RUN adduser --system --no-create-home --ingroup biomax biomax-service
+
+#
+# Add a couple of proposal user groups.
+# This is needed to emulate creation of proposal directories in
+# /data/visitors/biomax folder.
+#
+
+# the 'Test mxCuBe' proposal user group
+RUN addgroup --allow-bad-names 20230002-group
+# the 'TEST for checking data handling' proposal user group
+RUN addgroup --allow-bad-names 20170251-group
+
+#
+# Create /data/visitors/biomax folder.
+#
+RUN mkdir --parents --mode=g+s /data/visitors/biomax
+RUN chown biomax-service:biomax /data/visitors/biomax
+
+#
 # install convenience scripts for running MXCuBE from terminal
 # run.sh   - runs the python backend (mxcubeweb-server)
 # start.sh - starts the front-end in developer mode
