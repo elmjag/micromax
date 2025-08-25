@@ -76,6 +76,13 @@ RUN mkdir /opt/mxcube
 RUN mv /app/web/ui/build /opt/mxcube
 
 #
+# 'Expand' the MXCuBE server config file.
+# Put the stream URL that works inside the emulator.
+#
+RUN cd /app/conf/BioMAX/mxcube-web/ && \
+    sed 's/VIDEO_STREAM_URL:.*/VIDEO_STREAM_URL: ws:\/\/localhost:8082\/ws/' server.yaml.j2 > server.yaml
+
+#
 # space group look-up file
 #
 RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/
