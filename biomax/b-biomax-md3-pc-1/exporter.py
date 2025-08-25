@@ -193,9 +193,23 @@ class MD3Up:
             "CentringX": (-3.05, 3.05),
             "CentringY": (-3.05, 3.5),
             "CentringTableFocus": (-3.19668, 3.19871),
+            # BioMAX specific motors?
+            "CentringTableOrthogonal": (
+                -100.0,
+                100.0,
+            ),  # TODO: look-up limits on real MD3Down
+            "Kappa": (-100.0, 100.0),  # TODO: look-up limits on real MD3Down
+            "Phi": (-100.0, 100.0),  # TODO: look-up limits on real MD3Down
         }
 
         self._attrs = {
+            # BioMAX specific motors?
+            "KappaPosition": Attribute(0.0, DOUBLE),
+            "KappaState": Attribute("Ready", STATE),
+            "PhiPosition": Attribute(0.0, DOUBLE),
+            "PhiState": Attribute("Ready", STATE),
+            "CentringTableOrthogonalPosition": Attribute(0.0, DOUBLE),
+            "CentringTableOrthogonalState": Attribute("Ready", STATE),
             # note: the AlignmentTablePosition type signature is a guess
             "AlignmentTablePosition": Attribute(
                 "TRANSFER", "org.embl.md.dev.AlignmentTable$Position"
