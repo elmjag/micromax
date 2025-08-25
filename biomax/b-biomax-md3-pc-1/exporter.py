@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from typing import Optional, Any, Callable
+from typing import Optional, Any
+from collections.abc import Callable
 import asyncio
 import sys
 import math
@@ -8,7 +9,7 @@ from time import time
 from asyncio import StreamReader, StreamWriter, Lock
 from datetime import datetime
 from atcpserv import AsyncTCPServer
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 MOTOR_STEPS = 8
 PORT = 9001
@@ -59,9 +60,49 @@ INITIAL_EVENTS = [
 
 
 @dataclass
+class CoaxCamScale:
+    x: float
+    y: float
+
+
+# TODO: this is just a copy-paste from MD3Up emulation,
+# MD3Down have more zoom levels and presumably different scale factors
+# put correct number of zoom levels, with correct scale factors
+COAX_CAM_SCALES = [
+    # zoom level 1
+    CoaxCamScale(x=0.0018851562499999997, y=0.0018851562499999997),
+    # zoom level 2
+    CoaxCamScale(x=0.0015743281249999996, y=0.0015743281249999996),
+    # zoom level 3
+    CoaxCamScale(x=0.0012289635416666664, y=0.0012289635416666664),
+    # zoom level 4
+    CoaxCamScale(x=0.000950012567708333, y=0.000950012567708333),
+    # zoom level 5
+    CoaxCamScale(x=0.00023299124062499998, y=0.00023299124062499998),
+    # zoom level 6
+    CoaxCamScale(x=0.00018080156250000008, y=0.00018080156250000008),
+    # zoom level 7
+    CoaxCamScale(x=0.00011700000000000001, y=0.00011700000000000001),
+]
+
+
+@dataclass
 class Attribute:
-    val: Any
+    _val: Any
     type: str
+
+    # This callback function is meant to provide a way to validate and/or modify the new value before it's set.
+    value_transform: Callable[[Any], Any] = field(
+        default=lambda val: val
+    )  # identity function by default
+
+    @property
+    def val(self):
+        return self._val
+
+    @val.setter
+    def val(self, val: Any):
+        self._val = self.value_transform(val)
 
 
 @dataclass
@@ -73,6 +114,13 @@ class Task:
 
     def is_running(self) -> bool:
         return self.end_time > time()
+
+
+@dataclass
+class MovedMotor:
+    name: str
+    start_pos: float
+    end_pos: float
 
 
 AttributeUpdatedCallback = Callable[[str, Attribute, int], None]
@@ -88,6 +136,10 @@ class UnknownCommand(Exception):
 
 class CommandError(Exception):
     pass
+
+
+class DisallowedState(Exception):
+    """Exception for cases where a command or attribute is invoked, although it is not allowed in the current state."""
 
 
 def log(msg: str):
@@ -167,6 +219,11 @@ def epoch_as_text(epoch: float) -> str:
     return txt[:-3]
 
 
+def _wrap_omega_position(new_omega_position: float) -> float:
+    """Keep Omega rotation angle within 0..360 range"""
+    return new_omega_position % 360.0
+
+
 class SynchronizedWriter:
     def __init__(self, writer: StreamWriter):
         self._writer = writer
@@ -180,7 +237,7 @@ class SynchronizedWriter:
 
 class MD3Up:
     def __init__(self):
-        self._attr_updated_callbacks = set()
+        self._attr_updated_callbacks: set[AttributeUpdatedCallback] = set()
         self._synchronization_id = 0
         self._tasks = {}
 
@@ -200,6 +257,7 @@ class MD3Up:
             ),  # TODO: look-up limits on real MD3Down
             "Kappa": (-100.0, 100.0),  # TODO: look-up limits on real MD3Down
             "Phi": (-100.0, 100.0),  # TODO: look-up limits on real MD3Down
+
         }
 
         self._attrs = {
@@ -231,7 +289,9 @@ class MD3Up:
             "BackLightIsOn": Attribute(False, BOOLEAN),
             "BeamstopDistancePosition": Attribute(6.863187356482003, DOUBLE),
             # note: the BeamstopPosition type signature is a guess
-            "BeamstopPosition": Attribute("PARK", "org.embl.md.dev.Beamstop$Position"),
+            "BeamstopPosition": Attribute(
+                "PARK", "org.embl.md.dev.Beamstop$Position", self._move_beamstop_check
+            ),
             "BeamstopXPosition": Attribute(6.93, DOUBLE),
             "BeamstopXState": Attribute("Ready", STATE),
             "BeamstopYPosition": Attribute(4.75, DOUBLE),
@@ -264,7 +324,10 @@ class MD3Up:
             ),
             "DetectorDistance": Attribute(700.0, DOUBLE),
             "DetectorState": Attribute("Ready", STATE),
-            "FastShutterIsOpen": Attribute(False, BOOLEAN),
+            "DirectBeamEnabled": Attribute(False, BOOLEAN),
+            "FastShutterIsOpen": Attribute(
+                False, BOOLEAN, self._fast_shutter_direct_beam_check
+            ),
             "FrontLightFactor": Attribute(0.9, DOUBLE),
             "FrontLightIsOn": Attribute(False, BOOLEAN),
             # note: the HeadType type signature is a guess
@@ -334,6 +397,12 @@ class MD3Up:
                 "double, double, double, double, double, double, double, double, double, double, double",
                 self._do_start_scan_4d_ex,
             ),
+            # long startSimultaneousMoveMotors(String)
+            "startSimultaneousMoveMotors": (
+                "long",
+                "String",
+                self._do_start_simultaneous_move_motors,
+            ),
             # boolean isTaskRunning(int)
             "isTaskRunning": ("boolean", "int", self._do_is_task_running),
             # String[] getTaskInfo(int)
@@ -357,6 +426,69 @@ class MD3Up:
                 self._do_set_beamstop_position,
             ),
         }
+
+        # add an internal attributes watcher, to deal with zoom changes
+        self.add_attribute_updated_callback(self._attribute_updated)
+
+    def _attribute_updated(self, name: str, attr: Any, timestamp: int):
+        """
+        This callback watches for zoom level changes and updates camera scale attributes.
+        """
+        if name != "CoaxialCameraZoomValue":
+            # we only care about CoaxialCameraZoomValue, aka zoom level changes
+            return
+
+        #
+        # Here we know that it's the CoaxialCameraZoomValue attribute changed.
+        # Update the CoaxCamScale attributes to match new zoom level.
+        #
+
+        zoom_level = attr.val
+        coax_cam_scale = COAX_CAM_SCALES[zoom_level - 1]
+
+        self.write_attribute("CoaxCamScaleX", coax_cam_scale.x, timestamp)
+        self.write_attribute("CoaxCamScaleY", coax_cam_scale.y, timestamp)
+
+    def _fast_shutter_direct_beam_check(self, new_value: bool):
+        """Checks for a situation when an attempt is made to open fast shutter, with beamstop out of BEAM position.
+
+        Args:
+            new_value: new value for fastShutterIsOpen attribute
+
+        Raises:
+            DisallowedState: When opening fast shutter could lead to direct beam on the detector.
+
+        Returns:
+            new value for fastShutterIsOpen attribute. Here it's always the same as the input value.
+        """
+        direct_beam_enabled = self._attrs["DirectBeamEnabled"].val
+        beamstop_position = self._attrs["BeamstopPosition"].val
+
+        if not direct_beam_enabled and new_value and beamstop_position != "BEAM":
+            raise DisallowedState("Cannot change value to: true")
+
+        return new_value
+
+    def _move_beamstop_check(self, new_position: str):
+        """Checks for an attempt of moving beamstop when fast shutter is open and direct beam is not allowed.
+
+        Args:
+            new_position: New position for the beamstop.
+
+        Raises:
+            DisallowedState: Thrown when moving beamstop could lead to direct beam on the detector.
+
+        Returns:
+            new position for the beamstop. Here it's always the same as the input.
+        """
+        direct_beam_enabled = self._attrs["DirectBeamEnabled"].val
+        fast_shutter_is_open = self._attrs["FastShutterIsOpen"].val
+
+        if not direct_beam_enabled and fast_shutter_is_open:
+            # This is error message MD3UP generates when beamstop is moved while fast shutter is open.
+            raise DisallowedState("Invalid value")
+
+        return new_position
 
     def _add_task(self, name: str, running_time: float):
         def get_synchronization_id():
@@ -409,18 +541,162 @@ class MD3Up:
     ) -> int:
         return self._add_task("Start RASTER SCAN", 5.2)
 
+    async def _move_motors_simultaneously(
+        self, motors: list[MovedMotor], move_duration: float
+    ):
+        """Moves all motors simultaneously.
+
+        Args:
+            motors: list of motors to move
+            move_duration: time it takes to move all motors (in seconds)
+        """
+
+        for motor in motors:
+            state_attr = f"{motor.name}State"
+            self.write_attribute(state_attr, "Moving")
+
+        for _ in range(MOTOR_STEPS):
+            for motor in motors:
+                pos_attr = f"{motor.name}Position"
+                current_pos = self._attrs[pos_attr].val
+                step = (motor.end_pos - motor.start_pos) / MOTOR_STEPS
+                new_pos = current_pos + step
+                if motor.name == "Omega":
+                    new_pos = _wrap_omega_position(new_pos)
+                self.write_attribute(pos_attr, new_pos)
+
+            await asyncio.sleep(move_duration / MOTOR_STEPS)
+
+        for motor in motors:
+            state_attr = f"{motor.name}State"
+            self.write_attribute(state_attr, "Ready")
+
+    def _do_start_simultaneous_move_motors(self, motors_str: str) -> int:
+        """Start a task to move motors simultaneously.
+
+        Args:
+            motors_str: List of motor names and their target positions,
+                        formatted as "Motor1=Val1;Motor2=Val2;..."
+
+        Returns:
+            int: Task ID for the move operation.
+        """
+        motors = []
+        for motor_str in motors_str.split(";"):
+            if "=" not in motor_str:
+                continue
+            name, pos_str = motor_str.split("=")
+            pos = float(pos_str)
+            if name not in self._motors:
+                raise CommandError(f"Unknown motor: {name}")
+            start_pos = self._attrs[f"{name}Position"].val
+            motors.append(MovedMotor(name=name, start_pos=start_pos, end_pos=pos))
+
+        move_duration = 2.0
+        asyncio.create_task(
+            self._move_motors_simultaneously(motors, move_duration),
+        )
+        return self._add_task("Start Simultaneous Move Motors", move_duration)
+
     def _do_start_scan_ex(
         self,
         _frame_id,
-        _start_angle,
-        _scan_range,
-        _exposure_time,
+        start_angle,
+        scan_range,
+        exposure_time,
         _number_of_passes,
     ) -> int:
-        return self._add_task("Start SCAN", 3.2)
 
-    def _do_start_scan_4d_ex(self, *_):
-        return self._add_task("Start 4D-SCAN", 3.2)
+        # In MD3 exposure time dictates how long scan will take.
+        # In reality, the task would take longer, because we need to first move omega to `start_angle` position.
+        # Here it's simplified; the exposure time is whole task duration, and it takes same time to move, as for scan.
+        move_time = float(exposure_time) / 2
+
+        async def start_scan():
+            self.write_attribute("FastShutterIsOpen", True)
+
+            start_omega = _wrap_omega_position(float(start_angle))
+            stop_omega = _wrap_omega_position(start_omega + float(scan_range))
+
+            await self._move_motors_simultaneously(
+                [
+                    MovedMotor(
+                        name="Omega",
+                        start_pos=self._attrs["OmegaPosition"].val,
+                        end_pos=start_omega,
+                    )
+                ],
+                move_time,
+            )
+            await self._move_motors_simultaneously(
+                [MovedMotor(name="Omega", start_pos=start_omega, end_pos=stop_omega)],
+                move_time,
+            )
+            self.write_attribute("FastShutterIsOpen", False)
+
+        asyncio.create_task(start_scan())
+        return self._add_task("Start SCAN", float(exposure_time))
+
+    def _do_start_scan_4d_ex(
+        self,
+        start_angle: str,
+        scan_range: str,
+        exposure_time: str,
+        start_y: str,
+        start_z: str,
+        start_cx: str,
+        start_cy: str,
+        stop_y: str,
+        stop_z: str,
+        stop_cx: str,
+        stop_cy: str,
+    ):
+
+        # Time it takes to move to `start_angle` omega position.
+        # Set as 1/6 of exposure time (which will act as task duration, like in self._do_start_scan_ex),
+        # so that each motor move takes equal duration.
+        move_time = float(exposure_time) / 6
+
+        # Figure out omegas start and stop angles, in 0..360 range.
+        start_omega = _wrap_omega_position(float(start_angle))
+        stop_omega = _wrap_omega_position(start_omega + float(scan_range))
+
+        async def start_4d_scan():
+            await self._move_motors_simultaneously(
+                [
+                    MovedMotor(
+                        name="Omega",
+                        start_pos=self._attrs["OmegaPosition"].val,
+                        end_pos=start_omega,
+                    )
+                ],
+                move_time,
+            )
+
+            motors_to_move = [
+                MovedMotor(name="Omega", start_pos=start_omega, end_pos=stop_omega),
+                MovedMotor(
+                    name="AlignmentY", start_pos=float(start_y), end_pos=float(stop_y)
+                ),
+                MovedMotor(
+                    name="AlignmentZ", start_pos=float(start_z), end_pos=float(stop_z)
+                ),
+                MovedMotor(
+                    name="CentringX", start_pos=float(start_cx), end_pos=float(stop_cx)
+                ),
+                MovedMotor(
+                    name="CentringY", start_pos=float(start_cy), end_pos=float(stop_cy)
+                ),
+            ]
+
+            self.write_attribute("FastShutterIsOpen", True)
+
+            await self._move_motors_simultaneously(motors_to_move, 5 * move_time)
+
+            self.write_attribute("FastShutterIsOpen", False)
+
+        asyncio.create_task(start_4d_scan())
+        return self._add_task("Start 4D-SCAN", float(exposure_time))
 
     def _do_is_task_running(self, task_id) -> bool:
         task = self._get_task(task_id)
@@ -459,6 +735,12 @@ class MD3Up:
         return self._attrs["BeamstopPosition"].val
 
     def _do_set_beamstop_position(self, position):
+
+        # Performs a check if moving beamstop could lead to direct beam hitting the detector.
+        # It is already present in the setter of BeamstopPosition attribute, but it makes things
+        # easier by calling it also there, as the setting of attribute occurs inside a task.
+        self._move_beamstop_check(position)
+
         async def update_beamstop_pos():
             self.write_attribute("BeamstopPosition", "UNKNOWN")
             await asyncio.sleep(BEAMSTOP_TRAVEL_TIME_SEC)
@@ -520,8 +802,12 @@ class MD3Up:
 
         return attr
 
-    def write_attribute(self, attribute_name: str, attribute_value):
-        timestamp = int(time())
+    def write_attribute(
+        self, attribute_name: str, attribute_value, timestamp: None | int = None
+    ):
+        if timestamp is None:
+            timestamp = int(time())
+
         attr = self.get_attribute(attribute_name)
         attr.val = attribute_value
 
@@ -537,6 +823,7 @@ class MD3Up:
     def exec_command(self, command_name, command_args):
         cmd = self._commands.get(command_name)
         if cmd is None:
+            log(f"ERROR: unknown command: {command_name}")
             raise UnknownCommand()
 
         _, _, cmd_method = cmd
@@ -600,7 +887,7 @@ class Exporter:
             # Omega is a rotation angle motor, thus a special case.
             # MD3 automatically wraps any set value within 0..360 degrees range.
             if motor_name == "Omega":
-                step_pos = step_pos % 360.0
+                step_pos = _wrap_omega_position(step_pos)
 
             self._md3.write_attribute(motor_pos_attr, step_pos)
             await asyncio.sleep(2 / MOTOR_STEPS)
@@ -622,12 +909,15 @@ class Exporter:
         val = parse_val(attr_type, val)
 
         motor_name = self._md3.get_motor_name(name)
-        if motor_name is None:
-            # write non-motor attribute
-            self._md3.write_attribute(name, val)
-        else:
-            # this is a motor position attribute, emulate moving motor
-            asyncio.create_task(self._move_motor(writer, motor_name, val))
+        try:
+            if motor_name is None:
+                # write non-motor attribute
+                self._md3.write_attribute(name, val)
+            else:
+                # this is a motor position attribute, emulate moving motor
+                asyncio.create_task(self._move_motor(writer, motor_name, val))
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
 
         return "NULL"
 
@@ -643,6 +933,8 @@ class Exporter:
             ret = self._md3.exec_command(cmd_name, args)
         except CommandError as cmd_err:
             return f"ERR:{str(cmd_err)}"
+        except DisallowedState as invalid_state_err:
+            return f"ERR:{str(invalid_state_err)}"
 
         return f"RET:{encode_val(ret)}"
 
