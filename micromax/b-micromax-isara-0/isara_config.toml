@@ -1,0 +1,6 @@
+[isara_configuration]
+model = "ISARA2"
+operate_port = 10000
+monitor_port = 1000
+initial_position = "HOME"
+initial_tool = "ToolChanger"
