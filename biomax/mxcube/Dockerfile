@@ -55,7 +55,7 @@ RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-m
 #
 # Disable uploads to SciCat, avoid uploading data when running in the emulator.
 #
-RUN cd /app/conf/BioMAX && \
+RUN cd /app/conf && \
     sed -i '/proxy_address/d' lims.yaml && \
     sed -i 's/scicat_enabled: true/scicat_enabled: false/' collect.yaml
 
@@ -77,7 +77,7 @@ RUN mv /app/web/ui/build /opt/mxcube
 # 'Expand' the MXCuBE server config file.
 # Put the stream URL that works inside the emulator.
 #
-RUN cd /app/conf/BioMAX/mxcube-web/ && \
+RUN cd /app/conf/mxcube-web/ && \
     sed 's/VIDEO_STREAM_URL:.*/VIDEO_STREAM_URL: ws:\/\/localhost:8082\/ws/' server.yaml.j2 > server.yaml
 
 #
