@@ -16,7 +16,7 @@ RUN micromamba install --name base --channel maxiv-kits \
     # https://gitlab.com/taurus-org/taurus/-/issues/1352
     numpy=1.26.4 \
     sardana=3.5.0post0+maxiv \
-    tangods-isara2=4.2.0
+    tangods-isara2=4.2.2
 
 # install our circus 'plug-in'
 RUN mkdir /opt/circus
