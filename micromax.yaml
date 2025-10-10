@@ -66,10 +66,12 @@ services:
   b-micromax-isara-0:
     build:
       context: micromax/b-micromax-isara-0
-  pandabox:
+  b312a-a101232-cab01-ctl-panda-01:
+    container_name: pandabox
     build:
       context: micromax/pandabox
   dbg:
+    container_name: dbg
     environment:
      - TANGO_HOST=tango-cs:10000
     build:
