@@ -96,6 +96,12 @@ RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
 COPY jungfrau_geom_temp.txt crystfel_index_temp.txt /mxn/groups/sw/mxsw/mxcube_scripts/template/
 
 #
+# install pandabox schema files
+#
+RUN mkdir -p /data/staff/micromax/software/configs/pandabox_eh1/
+COPY pandabox/* /data/staff/micromax/software/configs/pandabox_eh1/
+
+#
 # Set-up micromax-service user,
 # which is used for running MXCuBE at the beamline.
 #
