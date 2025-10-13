@@ -1,10 +1,8 @@
-FROM mambaorg/micromamba:2.1.1
+FROM docker.io/mambaorg/micromamba:2.3.2
 
 USER root
 RUN apt-get update
 RUN apt-get -y install \
-    # need for lucid3
-    libgl1-mesa-glx \
     # to do the needful
     git \
     # for troubleshooting
