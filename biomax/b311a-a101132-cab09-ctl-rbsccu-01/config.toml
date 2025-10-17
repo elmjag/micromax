@@ -1,0 +1,3 @@
+[isara_configuration]
+model = "ISARA1"
+initial_tool = "Double"

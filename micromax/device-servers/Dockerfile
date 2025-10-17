@@ -17,7 +17,7 @@ RUN micromamba install --name base --channel maxiv-kits \
     numpy=1.26.4 \
     sardana=3.5.0post0+maxiv \
     tangods-mxdetectorcovers=1.0.1 \
-    tangods-isara2=4.2.2 \
+    tangods-isara2=4.4.0 \
     tangods-micromax-panda=1.3.0 \
     tangods-thorlabs-fw=0.1.1 \
     tangods-ekspla=0.1.1

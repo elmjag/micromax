@@ -10,6 +10,10 @@ RUN micromamba install --name base --channel conda-forge \
     python=3.11.9
 
 RUN micromamba install --name base --channel maxiv-kits \
-    tangods-isara2=4.2.2
+    tangods-isara2=4.4.0
 
-CMD ["/opt/conda/bin/IsaraEmulator", "--enable-logging", "ISARA1", "10000", "1000"]
+# config file for emulator
+RUN mkdir --parents /opt/isara
+COPY config.toml /opt/isara
+
+CMD ["/opt/conda/bin/IsaraEmulator", "--enable-logging", "/opt/isara/config.toml"]
