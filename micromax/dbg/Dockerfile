@@ -1,8 +1,8 @@
-FROM mambaorg/micromamba:1.4.2
+FROM docker.io/mambaorg/micromamba:2.3.2
 
 USER root
 RUN apt-get update
-RUN apt-get -y install supervisor nano netcat
+RUN apt-get -y install supervisor nano netcat-openbsd
 
 COPY condarc /opt/conda/.condarc
 RUN micromamba install --name base --channel conda-forge \

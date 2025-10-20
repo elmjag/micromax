@@ -1,4 +1,4 @@
-FROM mambaorg/micromamba:1.5.8
+FROM docker.io/mambaorg/micromamba:2.3.2
 
 USER root
 RUN apt-get update
