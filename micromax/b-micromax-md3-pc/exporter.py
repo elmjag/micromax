@@ -407,6 +407,18 @@ class MD3Up:
                 "Position",
                 self._do_set_beamstop_position,
             ),
+            # Position setAlignmentTablePosition(Position)
+            "setAlignmentTablePosition": (
+                "Position",
+                "Position",
+                self._do_set_alignment_table_position,
+            ),
+            # Position setCentringTablePosition(Position)
+            "setCentringTablePosition": (
+                "Position",
+                "Position",
+                self._do_set_centring_table_position,
+            ),
         }
 
         # add an internal attributes watcher, to deal with zoom changes
@@ -745,6 +757,14 @@ class MD3Up:
             return
 
         asyncio.create_task(update_beamstop_pos())
+
+    def _do_set_alignment_table_position(self, position):
+        # basically NOP for now
+        return position.upper()
+
+    def _do_set_centring_table_position(self, position):
+        # basically NOP for now
+        return position.upper()
 
     def _do_get_motor_dynamic_limits(self, _motor_name: str):
         # return some plausible dummy values for now
