@@ -59,8 +59,8 @@ RUN cd /app/conf && \
     sed -i '/proxy_address/d' lims.yaml && \
     sed -i 's/scicat_enabled: true/scicat_enabled: false/' collect.yaml
 
-RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core[maxiv]
+RUN /opt/conda/bin/pip install -e web
 
 # build front-end
 WORKDIR /app/web/ui

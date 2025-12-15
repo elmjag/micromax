@@ -70,8 +70,8 @@ RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-m
 # clone 'web' repository on maxiv-develop branch
 RUN git clone --depth 8 --branch maxiv-develop https://gitlab.maxiv.lu.se/kits-maxiv/mxcube/mxcube3.git web
 
-RUN /opt/conda/bin/pip install -e web
 RUN /opt/conda/bin/pip install -e core[maxiv]
+RUN /opt/conda/bin/pip install -e web
 
 # build front-end
 WORKDIR /app/web/ui
