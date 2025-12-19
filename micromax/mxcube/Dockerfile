@@ -38,7 +38,7 @@ RUN micromamba install --name base --channel conda-forge \
 #
 
 RUN micromamba create --name dashboard
-RUN micromamba install --name dashboard app-micromax-dashboard=0.12.0
+RUN micromamba install --name dashboard app-micromax-dashboard=0.14.0
 
 # add emulator specific dashboard configuration
 COPY dboard_config.py /opt/dashboard/config.py
