@@ -91,6 +91,11 @@ RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/
 COPY spg_pro_xtal_tab.txt /mxn/groups/sw/mxsw/mxcube_scripts/
 
 #
+# the 'autoload image' directory
+#
+RUN mkdir -p /mxn/groups/sw/mxsw/albula_autoload
+
+#
 # install crystfel template files
 #
 RUN mkdir -p /mxn/groups/sw/mxsw/mxcube_scripts/template/
