@@ -1,3 +1,4 @@
 [isara_configuration]
 model = "ISARA2"
 initial_tool = "DoubleGripper"
+pucks_present = [1, 29]

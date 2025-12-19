@@ -10,7 +10,7 @@ RUN micromamba install --name base --channel conda-forge \
     python=3.11.9
 
 RUN micromamba install --name base --channel maxiv-kits \
-     tangods-isara2=4.4.0
+    tangods-isara2=4.5.1
 
 # config file for emulator
 RUN mkdir --parents /opt/isara
